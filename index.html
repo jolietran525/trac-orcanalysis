@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>TDEI Data Viewer</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+
+    <!-- leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""/>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""></script>
+
+    <script src="https://unpkg.com/leaflet-omnivore/leaflet-omnivore.js"></script>
+
+    <!-- d3 -->
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://d3js.org/d3-collection.v1.min.js"></script>
+    <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
+
+    <!-- font awesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <!-- topojson -->
+    <!-- script src="https://unpkg.com/topojson@3"></script -->
+
+    <!-- leaflet minimap https://github.com/Norkart/Leaflet-MiniMap/tree/master/dist -->
+    <!--script src="libs/Control.MiniMap.min.js"></script>
+    <link rel="stylesheet" href="libs/Control.MiniMap.min.css" /-->
+
+    <!-- leaflet choropleth (https://github.com/timwis/leaflet-choropleth) -->
+    <!--script src="libs/choropleth.js"></script-->
+
+    <link rel="stylesheet" href="css/main.css" />
+  </head>
+
+<body>
+  <main>
+    <div id="map-area">
+      <div id="map"></div>
+    
+      <!-- <div class="form-container" onclick="focusFormContainer()">
+        <form class="form"  >
+            <input id="searchbar" onkeyup="search_function()" type="text"
+                name="search" placeholder="Search OSM id..">
+        </form>
+        <div class="results-container">
+          <ul class="results-list" id="results"></ul>
+        </div>
+      </div>
+ 
+
+      <div class="buttons">
+        <a href="javascript:void(0)" id="openbtn">
+          <i class="fa fa-bars" onclick="openNav()"></i>
+        </a>
+
+        <a href="javascript:void(0)" id="focusbtn" >
+          <i class="fa-solid fa-arrows-to-eye" onclick="focusOnFeature()"></i>
+        </a>
+      </div> -->
+
+    </div>
+
+
+    <!-- <div id="side-panel">
+      <a href="javascript:void(0)" id="closebtn" onclick="closeNav()">&#10006;</a>
+      <div class="content">
+        
+        <button id="filter-button" class="view" onclick="filterAndSort()">Review Features</button> -->
+
+        <!-- Only active when in review mode -->
+        <!-- <div id="review-mode">
+          <div id="feature-length"></div>
+          
+          <div id="feature-navigation">
+            <button onclick="previousFeature()" id="back-button"><i class="fa fa-backward"></i></button>
+            <button onclick="nextFeature()" id="next-button"><i class="fa fa-forward"></i></button>
+          </div>
+
+          <div id="table-container"> </div>
+
+          <div id="toggle-switch">
+            <div id="show-osm">
+              <p> Show all OSM segments that conflate with this SDOT </p>
+              <label class="switch" >
+                <input type="checkbox" id="show-all-osm" onchange="showOSM()" unchecked>
+                <span class="slider"></span>
+              </label>  
+            </div>
+
+            <div id="show-sdot">
+              <p> Show all SDOT segments that conflate with this OSM </p>
+              <label class="switch" >
+                <input type="checkbox" id="show-all-sdot" onchange="showSDOT()" unchecked>
+                <span class="slider"></span>
+              </label>  
+            </div>
+          </div>
+
+        </div>
+          
+      </div>
+      
+    </div> -->
+  </main>
+
+  <script src="js/main.js"> </script>
+</body>
+</html>
