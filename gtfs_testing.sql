@@ -67,12 +67,29 @@ SELECT
 	    'features', json_agg(ST_AsGeoJSON(t.*)::json)
 	)
 FROM (
-	SELECT t.route_id, r.route_short_name, r.agency_id, COUNT(t.trip_id) AS trips_count, sl.shape_id, sl.geom
+	SELECT t.route_id, r.route_short_name, r.agency_id, COUNT(t.trip_id) AS trips_count, t.shape_id--, sl.geom
 	FROM trips t
-	JOIN shapes_linestring sl 
-		ON sl.shape_id = t.shape_id
+--	JOIN shapes_linestring sl 
+--		ON sl.shape_id = t.shape_id
 	JOIN routes r
 		ON t.route_id = r.route_id 
-	GROUP BY sl.shape_id, t.route_id, sl.geom, r.route_short_name, r.agency_id
+	GROUP BY t.shape_id, t.route_id,  r.route_short_name, r.agency_id
 	ORDER BY t.route_id ASC, COUNT(t.trip_id) DESC
 ) AS t;
+
+
+/* ADD geom COLUMN in stops table */
+ALTER TABLE stops
+	ADD COLUMN geom geometry;
+
+-- Add values for the geom column
+UPDATE stops
+	SET geom = ST_GeomFromText('POINT(' || stop_lon || ' ' || stop_lat || ')');
+
+
+-- double check if the values in geom column is added accurately
+SELECT COUNT(*)
+FROM stops
+WHERE 'POINT(' || stop_lon || ' ' || stop_lat || ')' = ST_AsText(geom);
+
+
