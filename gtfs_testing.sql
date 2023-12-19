@@ -1,13 +1,15 @@
 CREATE EXTENSION postgis;
 
-/* ADD CONSTRAINTS */
+
+
+/*-- ADD CONSTRAINTS --*/
 
 ALTER TABLE stops
-ADD CONSTRAINT PK_stopid PRIMARY KEY (stop_id);
+	ADD CONSTRAINT PK_stopid PRIMARY KEY (stop_id);
 
 
 ALTER TABLE routes 
-ADD CONSTRAINT PK_routeid PRIMARY KEY (route_id);
+	ADD CONSTRAINT PK_routeid PRIMARY KEY (route_id);
 
 
 ALTER TABLE trips 
@@ -25,7 +27,8 @@ ALTER TABLE stop_times
 	ADD CONSTRAINT FK_stopid FOREIGN KEY (stop_id) REFERENCES stops(stop_id);
 
 
-/* ADD geom COLUMN IN shapes TABLE */
+
+/*-- ADD geom COLUMN IN shapes TABLE --*/
 ALTER TABLE shapes
 	ADD COLUMN geom geometry;
 	
@@ -46,39 +49,8 @@ CREATE TABLE shapes_linestring AS (
 );
 
 
-/*  */
--- For each route (route_id), which trip does the route takes the most? -- trips_count
--- This query gives us the different shape that the route would take and also the frequency that this route would take
-SELECT t.route_id, r.route_short_name, r.agency_id, COUNT(t.trip_id) AS trips_count, sl.shape_id, sl.geom
-FROM trips t
-JOIN shapes_linestring sl 
-	ON sl.shape_id = t.shape_id
-JOIN routes r
-	ON t.route_id = r.route_id 
-GROUP BY sl.shape_id, t.route_id, sl.geom, r.route_short_name, r.agency_id
-ORDER BY t.route_id ASC, COUNT(t.trip_id) DESC
 
-
--- Create a Feature Collection GeoJSON
-
-SELECT 
-	json_build_object(
-	    'type', 'FeatureCollection',
-	    'features', json_agg(ST_AsGeoJSON(t.*)::json)
-	)
-FROM (
-	SELECT t.route_id, r.route_short_name, r.agency_id, COUNT(t.trip_id) AS trips_count, t.shape_id--, sl.geom
-	FROM trips t
---	JOIN shapes_linestring sl 
---		ON sl.shape_id = t.shape_id
-	JOIN routes r
-		ON t.route_id = r.route_id 
-	GROUP BY t.shape_id, t.route_id,  r.route_short_name, r.agency_id
-	ORDER BY t.route_id ASC, COUNT(t.trip_id) DESC
-) AS t;
-
-
-/* ADD geom COLUMN in stops table */
+/*-- ADD geom COLUMN in stops table --*/
 ALTER TABLE stops
 	ADD COLUMN geom geometry;
 
@@ -91,5 +63,86 @@ UPDATE stops
 SELECT COUNT(*)
 FROM stops
 WHERE 'POINT(' || stop_lon || ' ' || stop_lat || ')' = ST_AsText(geom);
+
+
+
+/*-- DATA EXPLORATION --*/
+-- How many trips are there in trips table?
+SELECT COUNT(*)
+FROM trips t; -- 27,139
+
+
+-- How many distinct shape are there in trips table?
+SELECT COUNT(DISTINCT shape_id)
+FROM trips t -- 498
+WHERE shape_id IS NULL; -- this means there is no NULL shape in trips TABLE
+
+
+-- Check if one trip_id can have different shape: NO! one trip_id can have one distinct shape
+SELECT COUNT(DISTINCT shape_id) shapes_count
+FROM trips t
+GROUP BY trip_id 
+HAVING COUNT(DISTINCT shape_id) != 1;
+
+
+-- Check if one shape can have different trips, and different route:
+	-- One shape can have multiple trips, but only one route for that shape!
+SELECT COUNT(DISTINCT trip_id) trips_count, COUNT(DISTINCT route_id) routes_count
+FROM trips t
+GROUP BY shape_id ;
+
+
+-- For each route (route_id), which trip does the route takes the most? -- trips_count
+-- This query gives us the different shape that the route would take and also the frequency (based on trip_id) that this route would take
+-- When mapping, we want to show all the shape geom that a route would take, and also show the frequency (trips_count) that the route take
+SELECT t.route_id, r.route_short_name, r.agency_id, COUNT(t.trip_id) AS trips_count, sl.shape_id, sl.geom
+FROM trips t
+JOIN shapes_linestring sl 
+	ON sl.shape_id = t.shape_id
+JOIN routes r
+	ON t.route_id = r.route_id 
+WHERE t.route_id = 100113 AND t.shape_id = 10221019
+GROUP BY sl.shape_id, t.route_id, sl.geom, r.route_short_name, r.agency_id
+ORDER BY t.route_id ASC, COUNT(t.trip_id) DESC
+
+
+-- Create a Feature Collection GeoJSON
+SELECT 
+	json_build_object(
+	    'type', 'FeatureCollection',
+	    'features', json_agg(ST_AsGeoJSON(t.*)::json)
+	)
+FROM (
+	SELECT t.route_id, r.route_short_name, r.agency_id, COUNT(t.trip_id) AS trips_count, t.shape_id, sl.geom
+	FROM trips t
+	JOIN shapes_linestring sl 
+		ON sl.shape_id = t.shape_id
+	JOIN routes r
+		ON t.route_id = r.route_id 
+	GROUP BY t.shape_id, t.route_id,  r.route_short_name, r.agency_id, sl.geom
+	ORDER BY t.route_id ASC, COUNT(t.trip_id) DESC
+) AS t;
+
+
+-- show distinct stops along the route:
+SELECT DISTINCT ON(t.route_id, st.stop_id) t.route_id, st.stop_id, s.geom
+FROM trips t
+JOIN stop_times st 
+	ON st.trip_id = t.trip_id
+JOIN stops s 
+	ON s.stop_id = st.stop_id  
+ORDER BY t.route_id, st.stop_id 
+
+
+-- Show distinct stops along the route with each distinct shape
+SELECT DISTINCT t.route_id, sl.shape_id, st.stop_id, s.geom
+FROM trips t
+JOIN shapes_linestring sl 
+	ON sl.shape_id = t.shape_id
+JOIN stop_times st 
+	ON st.trip_id = t.trip_id
+JOIN stops s 
+	ON s.stop_id = st.stop_id  
+ORDER BY t.route_id ASC
 
 
