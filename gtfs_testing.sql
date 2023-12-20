@@ -134,8 +134,8 @@ JOIN stops s
 ORDER BY t.route_id, st.stop_id 
 
 
--- Show distinct stops along the route with each distinct shape
-SELECT DISTINCT t.route_id, sl.shape_id, st.stop_id, s.geom
+-- Show all distinct stops along the route for each distinct shape
+SELECT DISTINCT t.route_id, sl.shape_id, st.stop_id
 FROM trips t
 JOIN shapes_linestring sl 
 	ON sl.shape_id = t.shape_id

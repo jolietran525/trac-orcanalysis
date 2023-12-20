@@ -1,4 +1,4 @@
-let map = L.map('map', {zoomControl: false}).setView([47.60, -122.33], 12);
+let map = L.map('map', {zoomControl: false}).setView([47.60, -122.33], 10);
 
 
 /* ---------------------- MAP TILES ---------------------- */
@@ -43,11 +43,6 @@ let tiles_ewt = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/service
       attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
   });
 
-let apiKey = 'IQGg53CuV0CVTGepYYZlebRGHEFc5XeJ';
-  
-let api_url = 'https://transit.land/api/v2/tiles/?api_key=' + apiKey;
-  
-let transitland_tile = L.tileLayer(api_url);
 // default tile
 tiles_lght.addTo(map);
 
@@ -56,8 +51,7 @@ let baseLayers = {
     "Dark (CartoDB)": tiles_drk,
     "Color (Voyager)": tiles_vgr,
     "Satellite (ESRI)":  tiles_ewi,
-    "Terrain (ESRI)": tiles_ewt,
-    "transit land": transitland_tile
+    "Terrain (ESRI)": tiles_ewt
 };
 
 
@@ -74,7 +68,106 @@ let layerLegend = L.control({ position: 'bottomleft' });
 
 
 /* ---------------------- MAP LAYERS ---------------------- */
-// let apiKey = 'IQGg53CuV0CVTGepYYZlebRGHEFc5XeJ';
-  
-// let api_url = 'https://transit.land/api/v2/tiles?api_key=' + apiKey;
+function popup_attributes(feature, layer) {
+  let html = '<table>';
+  for (attrib in feature.properties) {
+      html += '<tr><td>' + attrib + '</td><td>' + feature.properties[attrib] + '</td></tr>';
+  }
+  layer.bindPopup(html + '</table>');
+}
 
+/* -------- ROUTES with SHAPES LAYER -------- */
+let routeShapeLayer;
+let routeShape;
+let highlightLayer;
+
+const t_routeShape = d3.json("data/routes_shapes.geojson");
+t_routeShape.then(data => {
+  routeShape = data;
+  // add features to map
+  routeShapeLayer  = L.geoJSON(routeShape, {
+      style: function(e) { return { weight: 2, opacity: 0.7, color:  "#5381ed" } },
+      onEachFeature: popup_attributes
+  });
+  
+  routeShapeLayer_transparent  = L.geoJSON(routeShape, {
+    style: function(e) { return { weight: 20, opacity: 0, color:  "#5381ed" } },
+  }).addTo(map);
+
+  // Highlight layer
+  highlightLayer = L.geoJSON(null, {
+    style: function(e) { return { weight: 10, opacity: 0.4, color: 'yellow' } } // Adjust the highlighted style
+  });
+
+  // Add original layer to map
+  routeShapeLayer.addTo(map);
+
+  // Add highlight layer to map (but initially empty)
+  highlightLayer.addTo(map);
+
+  // Add hover events
+  routeShapeLayer_transparent.on('mouseover', function (e) {
+    // highlightRoutesAtPoint(e.latlng);
+    highlightRoute(e.layer.feature.properties.route_id);
+  });
+
+  routeShapeLayer_transparent.on('mouseout', function () {
+    resetHighlight();
+  });
+});
+
+function highlightRoute(route_id) {
+  const highlightedFeatures = routeShape.features.filter(feature => feature.properties.route_id === route_id);
+  highlightLayer.clearLayers();
+  highlightLayer.addData({ type: 'FeatureCollection', features: highlightedFeatures });
+}
+
+function resetHighlight() {
+  highlightLayer.clearLayers();
+}
+
+function highlightRoutesAtPoint(latlng) {
+  const circle = L.circle(latlng);
+  
+  const intersectingFeatures = [];
+
+  routeShapeLayer_transparent.eachLayer(function (layer) {
+    const feature = layer.feature;
+    // console.log(turf.buffer(feature.geometry, 30, {units: 'meters'}));
+    if (turf.booleanIntersects(feature.geometry, turf.buffer(turf.point(circle.toGeoJSON().geometry.coordinates), 5, {unit: 'meters'}))) {
+      intersectingFeatures.push(feature);
+    }
+  });
+
+  // highlightRoute(intersectingFeatures.route_id);
+
+  highlightLayer.clearLayers();
+  highlightLayer.addData({ type: 'FeatureCollection', features: intersectingFeatures });
+}
+
+
+let routeStopLayer;
+let routeStop;
+const t_routeStop = d3.json("data/routes_stops.geojson");
+t_routeStop.then(data => {
+  routeStop = data;
+  // add features to map
+
+  var geojsonMarkerOptions = {
+    radius: 5,
+    fillColor: "#ff7800",
+    color: "#000",
+    weight: 1,
+    opacity: 1,
+    fillOpacity: 0.8
+  };
+
+  routeStopLayer  = L.geoJSON(routeStop, {
+    pointToLayer: function (feature, geom) {
+      return L.circleMarker(geom, geojsonMarkerOptions);
+    },
+      onEachFeature: popup_attributes
+  });
+  
+  // routeStopLayer.addTo(map);
+});
