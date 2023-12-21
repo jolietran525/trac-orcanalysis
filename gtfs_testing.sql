@@ -7,10 +7,12 @@ CREATE EXTENSION postgis;
 ALTER TABLE stops
 	ADD CONSTRAINT PK_stopid PRIMARY KEY (stop_id);
 
+ALTER TABLE agency 
+	ADD CONSTRAINT PK_agencyid PRIMARY KEY (agency_id);
 
 ALTER TABLE routes 
-	ADD CONSTRAINT PK_routeid PRIMARY KEY (route_id);
-
+	ADD CONSTRAINT PK_routeid PRIMARY KEY (route_id),
+	ADD CONSTRAINT FK_agencyid FOREIGN KEY (agency_id) REFERENCES agency(agency_id);
 
 ALTER TABLE trips 
 	ADD CONSTRAINT PK_tripid PRIMARY KEY (trip_id),
@@ -125,24 +127,30 @@ FROM (
 
 
 -- show distinct stops along the route:
-SELECT DISTINCT ON(t.route_id, st.stop_id) t.route_id, st.stop_id, s.geom
-FROM trips t
-JOIN stop_times st 
-	ON st.trip_id = t.trip_id
-JOIN stops s 
-	ON s.stop_id = st.stop_id  
-ORDER BY t.route_id, st.stop_id 
-
+-- Create a Feature Collection GeoJSON
+SELECT 
+	json_build_object(
+	    'type', 'FeatureCollection',
+	    'features', json_agg(ST_AsGeoJSON(t.*)::json)
+	)
+FROM(
+	SELECT DISTINCT ON(t.route_id, st.stop_id) t.route_id, st.stop_id, s.geom
+	FROM trips t
+	JOIN stop_times st 
+		ON st.trip_id = t.trip_id
+	JOIN stops s 
+		ON s.stop_id = st.stop_id  
+	ORDER BY t.route_id, st.stop_id 
+) AS t;
 
 -- Show all distinct stops along the route for each distinct shape
-SELECT DISTINCT t.route_id, sl.shape_id, st.stop_id
-FROM trips t
-JOIN shapes_linestring sl 
-	ON sl.shape_id = t.shape_id
-JOIN stop_times st 
-	ON st.trip_id = t.trip_id
-JOIN stops s 
-	ON s.stop_id = st.stop_id  
-ORDER BY t.route_id ASC
-
+SELECT 
+ json_object_agg("shape_id", "stop_id")
+FROM (
+	SELECT DISTINCT t.shape_id, st.stop_id
+	FROM trips t
+	JOIN stop_times st 
+		ON st.trip_id = t.trip_id
+	ORDER BY t.shape_id ASC
+) AS t;
 

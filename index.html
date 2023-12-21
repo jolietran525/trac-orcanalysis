@@ -45,72 +45,88 @@
 <body>
   <main>
     <div id="map-area">
+      
       <div id="map"></div>
     
-      <!-- <div class="form-container" onclick="focusFormContainer()">
-        <form class="form"  >
-            <input id="searchbar" onkeyup="search_function()" type="text"
-                name="search" placeholder="Search OSM id..">
-        </form>
-        <div class="results-container">
-          <ul class="results-list" id="results"></ul>
+      <div class="map-panel-tabs">
+        <div class="b-tabs tl-tabs block">
+          <nav class="tabs" role="tablist" aria-orientation="horizontal">
+            <div class="tab-1" onclick="activate_tab(1)">
+              <a class="is-active">
+                <span class="">Routes</span>
+              </a>
+            </div>
+            <div class="tab-2" onclick="activate_tab(2)">
+              <a class="">
+                <span class="">Departures</span>
+              </a>
+            </div>
+            <div class="tab-3" onclick="activate_tab(3)">
+              <a class="">
+                <span class="">Options</span>
+              </a>
+            </div>
+          </nav>
+
+          <section class="tab-content">
+            <div class="tab-item" id="tab-1" tabindex="0" id="routes" style="display: block;">
+              <div id="text-description">
+                <p style="font-size:120%"> <strong>Select routes</strong></p>
+                <p> Use your cursor to highlight routes and see their names here. Click for more details. </p>
+              </div>
+            </div>
+
+            <div class="tab-item" id="tab-2" tabindex="-1" id="departures" style="display: none;">
+              <div>
+                <div class="field">
+                  <div class="control">
+                    <div class="field is-grouped">
+                      <div class="autocomplete control is-expanded m-0 mr-2">
+                        <div class="control has-icons-left is-expanded">
+                          <input placeholder="Search stops. Example: Penn Station" max-width="600px" aria-autocomplete="list" class="input" type="text" autocomplete="off">
+                          <span class="icon is-left">
+                            <i class="mdi mdi-magnify mdi-24px"></i>
+                          </span>
+                        </div>
+                        <div class="dropdown-menu dropdown-content is-opened-bottom" style="max-height: 800px; display: none;">
+                        </div>
+                      </div>
+                      <div class="field">
+                        <div class="control">
+                            <div class="field has-addons">
+                              <span class="button">
+                                <span class="icon">
+                                  <i class="mdi mdi-crosshairs mdi-24px"></i>
+                                </span>
+                              </span>
+                            </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="tab-item" id="tab-3" tabindex="-1" id="options" style="display: none;">
+              <div class="field">
+                <label class="b-checkbox checkbox">
+                  <input type="checkbox" class="check" true-value="true" false-value="false" value="false">
+                  <span class="control-label"> Show stop-to-stop geometries </span>
+                </label>
+              </div>
+              <div class="field">
+                <label class="b-checkbox checkbox">
+                  <input type="checkbox" class="check" true-value="true" false-value="false" value="false">
+                  <span class="control-label"> Show problematic geometries </span>
+                </label>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
- 
-
-      <div class="buttons">
-        <a href="javascript:void(0)" id="openbtn">
-          <i class="fa fa-bars" onclick="openNav()"></i>
-        </a>
-
-        <a href="javascript:void(0)" id="focusbtn" >
-          <i class="fa-solid fa-arrows-to-eye" onclick="focusOnFeature()"></i>
-        </a>
-      </div> -->
 
     </div>
-
-
-    <!-- <div id="side-panel">
-      <a href="javascript:void(0)" id="closebtn" onclick="closeNav()">&#10006;</a>
-      <div class="content">
-        
-        <button id="filter-button" class="view" onclick="filterAndSort()">Review Features</button> -->
-
-        <!-- Only active when in review mode -->
-        <!-- <div id="review-mode">
-          <div id="feature-length"></div>
-          
-          <div id="feature-navigation">
-            <button onclick="previousFeature()" id="back-button"><i class="fa fa-backward"></i></button>
-            <button onclick="nextFeature()" id="next-button"><i class="fa fa-forward"></i></button>
-          </div>
-
-          <div id="table-container"> </div>
-
-          <div id="toggle-switch">
-            <div id="show-osm">
-              <p> Show all OSM segments that conflate with this SDOT </p>
-              <label class="switch" >
-                <input type="checkbox" id="show-all-osm" onchange="showOSM()" unchecked>
-                <span class="slider"></span>
-              </label>  
-            </div>
-
-            <div id="show-sdot">
-              <p> Show all SDOT segments that conflate with this OSM </p>
-              <label class="switch" >
-                <input type="checkbox" id="show-all-sdot" onchange="showSDOT()" unchecked>
-                <span class="slider"></span>
-              </label>  
-            </div>
-          </div>
-
-        </div>
-          
-      </div>
-      
-    </div> -->
   </main>
 
   <script src="js/main.js"> </script>
