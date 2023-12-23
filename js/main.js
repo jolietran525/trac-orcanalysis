@@ -80,7 +80,6 @@ function popup_attributes(feature, layer) {
 
 let routeStopLayer;
 let routeStop;
-const minZoomLevelToShowLayer = 14;
 
 const t_routeStop = d3.json("data/routes_stops.geojson");
 t_routeStop.then(data => {
@@ -88,7 +87,7 @@ t_routeStop.then(data => {
   // add features to map
 
   var geojsonMarkerOptions = {
-    radius: 5,
+    radius: 3.5,
     fillColor: "#ff7800",
     color: "#000",
     weight: 1,
@@ -101,50 +100,18 @@ t_routeStop.then(data => {
       return L.circleMarker(geom, geojsonMarkerOptions);
     },
       onEachFeature: popup_attributes
-  });
-  
-  // Add an event listener for the zoomend event
-  map.on('movestart zoomlevelschange', function () {
-    checkZoomAndBoundingBox();
-  });
-
-  map.on('moveend zoomlevelschange', function () {
-    checkZoomAndBoundingBox();
-  });
-
-  // Initially check whether to show the layer based on zoom level
-  checkZoomAndBoundingBox();
+  }).addTo(map);
   
 });
 
 
-function checkZoomAndBoundingBox() {
-  const currentZoomLevel = map.getZoom();
-  const currentBoundingBox = map.getBounds();
-
-
-  if (currentZoomLevel >= minZoomLevelToShowLayer) {
-    const routeStopFeatures = routeStop.features.filter(feature =>
-      turf.booleanIntersects(feature.geometry, turf.polygon([
-        [
-          [currentBoundingBox.getWest(), currentBoundingBox.getSouth()],
-          [currentBoundingBox.getWest(), currentBoundingBox.getNorth()],
-          [currentBoundingBox.getEast(), currentBoundingBox.getNorth()],
-          [currentBoundingBox.getEast(), currentBoundingBox.getSouth()],
-          [currentBoundingBox.getWest(), currentBoundingBox.getSouth()],
-        ]
-      ])));
+function addStopstoClickedLayer() {
+  const routeStopFeatures = routeStop.features.filter(feature =>
+      feature.properties.route_id === currentHighlightedRouteId 
+  );
   
-    routeStopLayer.clearLayers();
-    routeStopLayer.addData({ type: 'FeatureCollection', features: routeStopFeatures });
-  }
-
-  else {
-    // If the layer is not already added, add it to the map
-    if (!map.hasLayer(routeStopLayer)) {
-      routeStopLayer.addTo(map);
-    }
-  }
+  routeStopLayer.clearLayers();
+  routeStopLayer.addData({ type: 'FeatureCollection', features: routeStopFeatures });
 }
 
 
@@ -152,42 +119,65 @@ function checkZoomAndBoundingBox() {
 let routeShapeLayer;
 let routeShape;
 let highlightLayer;
+let currentHighlightedRouteId; // Global variable to store the currently highlighted route ID
 
 const t_routeShape = d3.json("data/routes_shapes.geojson");
 t_routeShape.then(data => {
   routeShape = data;
 
-  // Highlight layer
+  // Highlight layer, default as NULL
   highlightLayer = L.geoJSON(null, {
-    style: function(e) { return { weight: 16, opacity: 0.5, color: 'yellow' } } // Adjust the highlighted style
+    style: function(e) { return { weight: 16, opacity: 0.4, color: 'yellow' } } // Adjust the highlighted style
   }).addTo(map);
   
-  // add features to map
+  // add transparent layer to map
   routeShapeLayer_transparent  = L.geoJSON(routeShape, {
     style: function(e) { return { weight: 18, opacity: 0} }
   }).addTo(map);
 
   // add features to map
   routeShapeLayer  = L.geoJSON(routeShape, {
-      style: function(e) { return { weight: 2, opacity: 0.7, color:  "#42a5d6" } }
+      style: function(e) { return { weight: 2, opacity: 0.5, color:  "#42a5d6" } }
   }).addTo(map);
 
   // Add hover events
   routeShapeLayer_transparent.on('mouseover', function (e) {
-    // highlightRoutesAtPoint(e.latlng);
-    highlightRoute(e.layer.feature.properties.route_id);
+    const route_id = e.layer.feature.properties.route_id;
+    highlightRouteHover(route_id);
+  });
+
+  routeShapeLayer_transparent.on('click', function (e) {
+    const route_id = e.layer.feature.properties.route_id;
+    if (currentHighlightedRouteId && currentHighlightedRouteId != route_id) {
+      resetClick(currentHighlightedRouteId);
+      currentHighlightedRouteId = null;
+    }
+    highlightRouteClick(route_id);
+    addStopstoClickedLayer();
   });
 
   routeShapeLayer_transparent.on('mouseout', function () {
-    resetHighlight();
+    resetHover();
+    
     document.getElementById('text-description').innerHTML = 
       `<p style="font-size:120%"> <strong>Select routes</strong></p>
       <p> Use your cursor to highlight routes and see their names here. Click for more details. </p>`;
   });
+
 });
 
-function highlightRoute(route_id) {
-  const highlightedFeatures = routeShape.features.filter(feature => feature.properties.route_id === route_id);
+function getColorBasedOnTripsCount(shape_id, shape_ids) {
+  let colors = ['#00202e',  '#003f5c',  '#2c4875',  '#8a508f',  '#bc5090',  '#ff6361',  '#ff8531',  '#ffa600',  '#ffd380'];
+  for (let i = 0; i < shape_ids.length; i++) {
+    if (shape_id === shape_ids[i]) {
+      return colors[i];
+    }
+  }
+}
+
+let highlightedFeatures;
+function highlightRouteHover(route_id) {
+  highlightedFeatures = routeShape.features.filter(feature => feature.properties.route_id === route_id);
   highlightLayer.clearLayers();
   highlightLayer.addData({ type: 'FeatureCollection', features: highlightedFeatures });
   highlightLayer.bringToBack();
@@ -195,76 +185,111 @@ function highlightRoute(route_id) {
   document.getElementById('text-description').innerHTML = `<p> <strong>${highlightedFeatures[0].properties.agency_name}<strong></p>`;
   document.getElementById('text-description').innerHTML += `<p>${highlightedFeatures[0].properties.route_short_name}</p>`;
   document.getElementById('text-description').innerHTML += `<p>This route takes <strong>${highlightedFeatures.length}</strong> different shapes.</p>`;
-  
-  // console.log(highlightedFeatures.length);
+}
 
+
+function highlightRouteClick(route_id) {
+  // Reset the style of the previously highlighted route
+  if (currentHighlightedRouteId && currentHighlightedRouteId !== route_id) {
+    resetClick(currentHighlightedRouteId);
+  }
+
+  document.getElementById('text-description').innerHTML = `<p> <strong>${highlightedFeatures[0].properties.agency_name}<strong></p>`;
+  document.getElementById('text-description').innerHTML += `<p>${highlightedFeatures[0].properties.route_short_name}</p>`;
+  document.getElementById('text-description').innerHTML += `<p>This route takes <strong>${highlightedFeatures.length}</strong> different shapes.</p>`;
+
+  let shape_ids = [];
   highlightLayer.eachLayer(function (layer) {
     const feature = layer.feature;
-    
+    shape_ids.push(feature.properties.shape_id);
     document.getElementById('text-description').innerHTML += `<p><strong>${feature.properties.trips_count}</strong> trips count.</p>`;
-  })
-  
-}
-
-function resetHighlight() {
-  highlightLayer.clearLayers();
-}
-
-
-function highlightRoutesAtPoint(latlng) {
-  const circle = L.circle(latlng);
-  
-  const intersectingFeatures = [];
-
-  routeShapeLayer_transparent.eachLayer(function (layer) {
-    const feature = layer.feature;
-    
-    if (turf.booleanIntersects(feature.geometry, turf.buffer(turf.point(circle.toGeoJSON().geometry.coordinates), 0.08, {unit: 'kilometers'}))) {
-      intersectingFeatures.push(feature);
-    }
-  })
-
-  // console.log(intersectingFeatures);
-
-  highlightLayer.clearLayers();
-  highlightLayer.addData({ type: 'FeatureCollection', features: intersectingFeatures });
-
-  highlightLayer.bringToBack();
-
-  // Create a map to store distinct route short names for each agency
-  const agencyRouteMap = new Map();
-
-  // Populate the map with distinct route short names for each agency
-  intersectingFeatures.forEach(feature => {
-    const agencyName = feature.properties.agency_name;
-    const routeShortName = feature.properties.route_short_name;
-
-    if (!agencyRouteMap.has(agencyName)) {
-      agencyRouteMap.set(agencyName, new Set());
-    }
-
-    agencyRouteMap.get(agencyName).add(routeShortName);
   });
 
-  // Display information
-  document.getElementById('text-description').innerHTML = '';
-
-  console.log(agencyRouteMap.keys)
-
-  agencyRouteMap.forEach((routeShortNames, agencyName) => {
-    document.getElementById('text-description').innerHTML += `<p><strong>${agencyName}</strong></p>`;
-    
-    const numRouteShortNames = routeShortNames.size;
-
-    if (numRouteShortNames >= 5 ) {
-      document.getElementById('text-description').innerHTML += `<p>${numRouteShortNames} routes</p>`;
+  routeShapeLayer.eachLayer(function (layer) {
+    if (layer.feature.properties.route_id === route_id) {
+      let shape_id = layer.feature.properties.shape_id;
+      layer.setStyle({ weight: 5, opacity: 0.5, color: getColorBasedOnTripsCount(shape_id, shape_ids) }); // Adjust the style as needed
+      layer.bringToFront();
+      currentHighlightedRouteId = route_id; // Update the currently highlighted route ID
     }
-    else {
-      document.getElementById('text-description').innerHTML += `<p>${[...routeShortNames].join('<br>')}</p>`;
-    }
-  });  
-
+  });
 }
+
+function resetHover() {
+  highlightLayer.clearLayers();
+}
+
+function resetClick(route_id) {
+  routeShapeLayer.eachLayer(function (layer) {
+    if (layer.feature.properties.route_id === route_id) {
+      routeShapeLayer.resetStyle(layer);
+    }
+  });
+  routeStopLayer.clearLayers();
+}
+
+const btn = document.getElementById("refresh_button");
+
+btn.addEventListener("click", function () {
+  resetHover();
+  resetClick(currentHighlightedRouteId);
+});
+
+
+// function highlightRoutesAtPoint(latlng) {
+//   const circle = L.circle(latlng);
+  
+//   const intersectingFeatures = [];
+
+//   routeShapeLayer_transparent.eachLayer(function (layer) {
+//     const feature = layer.feature;
+    
+//     if (turf.booleanIntersects(feature.geometry, turf.buffer(turf.point(circle.toGeoJSON().geometry.coordinates), 0.08, {unit: 'kilometers'}))) {
+//       intersectingFeatures.push(feature);
+//     }
+//   })
+
+//   // console.log(intersectingFeatures);
+
+//   highlightLayer.clearLayers();
+//   highlightLayer.addData({ type: 'FeatureCollection', features: intersectingFeatures });
+
+//   highlightLayer.bringToBack();
+
+//   // Create a map to store distinct route short names for each agency
+//   const agencyRouteMap = new Map();
+
+//   // Populate the map with distinct route short names for each agency
+//   intersectingFeatures.forEach(feature => {
+//     const agencyName = feature.properties.agency_name;
+//     const routeShortName = feature.properties.route_short_name;
+
+//     if (!agencyRouteMap.has(agencyName)) {
+//       agencyRouteMap.set(agencyName, new Set());
+//     }
+
+//     agencyRouteMap.get(agencyName).add(routeShortName);
+//   });
+
+//   // Display information
+//   document.getElementById('text-description').innerHTML = '';
+
+//   console.log(agencyRouteMap.keys)
+
+//   agencyRouteMap.forEach((routeShortNames, agencyName) => {
+//     document.getElementById('text-description').innerHTML += `<p><strong>${agencyName}</strong></p>`;
+    
+//     const numRouteShortNames = routeShortNames.size;
+
+//     if (numRouteShortNames >= 5 ) {
+//       document.getElementById('text-description').innerHTML += `<p>${numRouteShortNames} routes</p>`;
+//     }
+//     else {
+//       document.getElementById('text-description').innerHTML += `<p>${[...routeShortNames].join('<br>')}</p>`;
+//     }
+//   });  
+
+// }
 
 
 
