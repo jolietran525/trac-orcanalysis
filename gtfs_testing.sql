@@ -115,17 +115,19 @@ SELECT
 	    'features', json_agg(ST_AsGeoJSON(t.*)::json)
 	)
 FROM (
-	SELECT t.route_id, r.route_short_name, r.agency_id, COUNT(t.trip_id) AS trips_count, t.shape_id, sl.geom
+	SELECT t.route_id, r.route_short_name, t.trip_headsign, a.agency_id, a.agency_name, COUNT(t.trip_id) AS trips_count, t.shape_id, sl.geom
 	FROM trips t
 	JOIN shapes_linestring sl 
 		ON sl.shape_id = t.shape_id
 	JOIN routes r
 		ON t.route_id = r.route_id 
-	GROUP BY t.shape_id, t.route_id,  r.route_short_name, r.agency_id, sl.geom
+	JOIN agency a
+		ON r.agency_id = a.agency_id 
+	GROUP BY t.shape_id, t.route_id,  r.route_short_name, t.trip_headsign, a.agency_id, a.agency_name, sl.geom
 	ORDER BY t.route_id ASC, COUNT(t.trip_id) DESC
 ) AS t;
 
-
+SELECT * FROM trips
 -- show distinct stops along the route:
 -- Create a Feature Collection GeoJSON
 SELECT 

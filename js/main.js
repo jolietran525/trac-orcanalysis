@@ -76,6 +76,28 @@ function popup_attributes(feature, layer) {
   layer.bindPopup(html + '</table>');
 }
 
+
+let colors = ['#e6194b',
+              '#3cb44b', 
+              '#ffe119', 
+              '#4363d8', 
+              '#f58231', 
+              '#911eb4', 
+              '#46f0f0', 
+              '#f032e6', 
+              '#bcf60c', 
+              '#fabebe', 
+              '#008080', 
+              '#e6beff', 
+              '#9a6324', 
+              '#fffac8', 
+              '#800000', 
+              '#aaffc3', 
+              '#808000', 
+              '#ffd8b1', 
+              '#000075'];
+
+
 /* -------- ROUTES with STOPS LAYER -------- */
 
 let routeStopLayer;
@@ -119,7 +141,7 @@ function addStopstoClickedLayer() {
 let routeShapeLayer;
 let routeShape;
 let highlightLayer;
-let currentHighlightedRouteId; // Global variable to store the currently highlighted route ID
+let currentHighlightedRouteId = null; // Global variable to store the currently highlighted route ID
 
 const t_routeShape = d3.json("data/routes_shapes.geojson");
 t_routeShape.then(data => {
@@ -127,7 +149,7 @@ t_routeShape.then(data => {
 
   // Highlight layer, default as NULL
   highlightLayer = L.geoJSON(null, {
-    style: function(e) { return { weight: 16, opacity: 0.4, color: 'yellow' } } // Adjust the highlighted style
+    style: function(e) { return { weight: 16, opacity: 0.5, color: 'yellow' } } // Adjust the highlighted style
   }).addTo(map);
   
   // add transparent layer to map
@@ -137,7 +159,7 @@ t_routeShape.then(data => {
 
   // add features to map
   routeShapeLayer  = L.geoJSON(routeShape, {
-      style: function(e) { return { weight: 2, opacity: 0.5, color:  "#42a5d6" } }
+      style: function(e) { return { weight: 2, opacity: 0.3, color:  "#42a5d6" } }
   }).addTo(map);
 
   // Add hover events
@@ -148,7 +170,7 @@ t_routeShape.then(data => {
 
   routeShapeLayer_transparent.on('click', function (e) {
     const route_id = e.layer.feature.properties.route_id;
-    if (currentHighlightedRouteId && currentHighlightedRouteId != route_id) {
+    if (currentHighlightedRouteId != null && currentHighlightedRouteId != route_id) {
       resetClick(currentHighlightedRouteId);
       currentHighlightedRouteId = null;
     }
@@ -167,12 +189,30 @@ t_routeShape.then(data => {
 });
 
 function getColorBasedOnTripsCount(shape_id, shape_ids) {
-  let colors = ['#00202e',  '#003f5c',  '#2c4875',  '#8a508f',  '#bc5090',  '#ff6361',  '#ff8531',  '#ffa600',  '#ffd380'];
   for (let i = 0; i < shape_ids.length; i++) {
     if (shape_id === shape_ids[i]) {
       return colors[i];
     }
   }
+}
+
+
+layerLegend.onAdd = function (map) {
+  let div = L.DomUtil.create('div', 'legend');
+  div.style.display = 'none';
+  return div;
+};
+
+// Add the legend to the map
+layerLegend.addTo(map);
+
+function bringShapetoFront(shape_id) {
+  routeShapeLayer.eachLayer(function (layer) {
+    if (layer.feature.properties.shape_id === shape_id) {
+      layer.bringToFront();
+    }
+  });
+  routeStopLayer.bringToFront();
 }
 
 let highlightedFeatures;
@@ -181,7 +221,7 @@ function highlightRouteHover(route_id) {
   highlightLayer.clearLayers();
   highlightLayer.addData({ type: 'FeatureCollection', features: highlightedFeatures });
   highlightLayer.bringToBack();
-
+  
   document.getElementById('text-description').innerHTML = `<p> <strong>${highlightedFeatures[0].properties.agency_name}<strong></p>`;
   document.getElementById('text-description').innerHTML += `<p>${highlightedFeatures[0].properties.route_short_name}</p>`;
   document.getElementById('text-description').innerHTML += `<p>This route takes <strong>${highlightedFeatures.length}</strong> different shapes.</p>`;
@@ -194,21 +234,26 @@ function highlightRouteClick(route_id) {
     resetClick(currentHighlightedRouteId);
   }
 
-  document.getElementById('text-description').innerHTML = `<p> <strong>${highlightedFeatures[0].properties.agency_name}<strong></p>`;
-  document.getElementById('text-description').innerHTML += `<p>${highlightedFeatures[0].properties.route_short_name}</p>`;
-  document.getElementById('text-description').innerHTML += `<p>This route takes <strong>${highlightedFeatures.length}</strong> different shapes.</p>`;
+  let legendHTML = `<h3>Route: ${highlightedFeatures[0].properties.route_short_name}</h3>`;
+  legendHTML += `<ul>`;
 
   let shape_ids = [];
+  let i = 0;
   highlightLayer.eachLayer(function (layer) {
     const feature = layer.feature;
     shape_ids.push(feature.properties.shape_id);
-    document.getElementById('text-description').innerHTML += `<p><strong>${feature.properties.trips_count}</strong> trips count.</p>`;
+    legendHTML  += `<li onclick="bringShapetoFront(${feature.properties.shape_id})"><span class="legend-color" style="background-color: ${colors[i]}" ></span><label><strong>${feature.properties.trips_count}</strong> trips count.</label></li>`;
+    i++;
   });
+  legendHTML  += `</ul>`;
+
+  document.getElementsByClassName('legend')[0].style.display = 'block';
+  document.getElementsByClassName('legend')[0].innerHTML = legendHTML;
 
   routeShapeLayer.eachLayer(function (layer) {
     if (layer.feature.properties.route_id === route_id) {
       let shape_id = layer.feature.properties.shape_id;
-      layer.setStyle({ weight: 5, opacity: 0.5, color: getColorBasedOnTripsCount(shape_id, shape_ids) }); // Adjust the style as needed
+      layer.setStyle({ weight: 5, opacity: 1, color: getColorBasedOnTripsCount(shape_id, shape_ids) }); // Adjust the style as needed
       layer.bringToFront();
       currentHighlightedRouteId = route_id; // Update the currently highlighted route ID
     }
@@ -226,6 +271,9 @@ function resetClick(route_id) {
     }
   });
   routeStopLayer.clearLayers();
+  currentHighlightedRouteId = null;
+  document.getElementsByClassName('legend')[0].innerHTML = "";
+  document.getElementsByClassName('legend')[0].style.display = 'none';
 }
 
 const btn = document.getElementById("refresh_button");
