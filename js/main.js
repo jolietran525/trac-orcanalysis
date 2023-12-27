@@ -108,30 +108,44 @@ t_routeStop.then(data => {
 
   var geojsonMarkerOptions = {
     radius: 3.5,
-    fillColor: "#ff7800",
-    color: "#000",
-    weight: 1,
+    fillColor: "#ffffff",
+    color: "#000000",
+    weight: 2,
     opacity: 1,
-    fillOpacity: 0.8
+    fillOpacity: 1
   };
 
   routeStopLayer  = L.geoJSON(null, {
     pointToLayer: function (feature, geom) {
       return L.circleMarker(geom, geojsonMarkerOptions);
     },
-      onEachFeature: popup_attributes
+    onEachFeature: popup_attributes
   }).addTo(map);
   
 });
 
 
+// Add an event listener to the checkbox element
+const checkbox = document.querySelector('.check');
+checkbox.addEventListener('change', toggleRouteStopLayer);
+
 function addStopstoClickedLayer() {
   const routeStopFeatures = routeStop.features.filter(feature =>
       feature.properties.route_id === currentHighlightedRouteId 
   );
-  
+
   routeStopLayer.clearLayers();
   routeStopLayer.addData({ type: 'FeatureCollection', features: routeStopFeatures });
+}
+
+function toggleRouteStopLayer() {  
+  let showStops = checkbox.checked;
+  // Toggle the visibility of the routeStopLayer
+  if (showStops) {
+    addStopstoClickedLayer();
+  } else {
+    routeStopLayer.clearLayers();
+  }
 }
 
 
@@ -151,7 +165,7 @@ t_routeShape.then(data => {
   }).addTo(map);
 
   highlightShape = L.geoJSON(null, {
-    style: function(e) { return { weight: 14, opacity: 0.5, color: 'orange' } } // Adjust the highlighted style
+    style: function(e) { return { weight: 16, opacity: 0.5, color: 'orange' } } // Adjust the highlighted style
   }).addTo(map);
   
   // add transparent layer to map
@@ -161,7 +175,7 @@ t_routeShape.then(data => {
 
   // add features to map
   routeShapeLayer  = L.geoJSON(routeShape, {
-      style: function(e) { return { weight: 2, opacity: 0.7, color:  "#a9a9a9" } }
+      style: function(e) { return { weight: 2, opacity: 0.8, color:  "#a9a9a9" } }
   }).addTo(map);
 
   // Add hover events
@@ -266,6 +280,8 @@ function highlightRouteClick(route_id) {
       currentHighlightedRouteId = route_id; // Update the currently highlighted route ID
     }
   });
+
+  checkbox.checked = true;
 }
 
 
@@ -291,6 +307,7 @@ const btn = document.getElementById("refresh_button");
 btn.addEventListener("click", function () {
   resetHover();
   resetClick(currentHighlightedRouteId);
+  checkbox.checked = false;
 });
 
 
@@ -364,4 +381,87 @@ function activate_tab(n) {
       document.getElementById("tab-" + i).style.display = "none";
     }
   }
+}
+
+let routes;
+async function routes_data() {
+  const response = await fetch('./data/routes.json');
+  routes = await response.json();
+}
+routes_data();
+
+function focusFormContainer() {
+  // Get the form container element
+  const formContainer = document.querySelector('.form-container');
+
+  // Add a class to simulate focus effect
+  formContainer.classList.add('focused');
+  
+  document.getElementsByClassName("dropdown-content")[0].style.display = "block";
+  
+  // Add an event listener to remove the class when clicking outside the form container
+  document.addEventListener('click', function removeFocus(e) {
+    if (!formContainer.contains(e.target)) {
+      formContainer.classList.remove('focused');
+      document.removeEventListener('click', removeFocus);
+      document.getElementsByClassName("dropdown-content")[0].style.display = "none";
+    }
+  });
+}
+
+
+function search_function() {
+    let input = document.getElementById('searchbar').value.toLowerCase();
+
+    if (input.trim() === '') {
+        // If the input is empty, clear the results
+        clearResults();
+    } else {
+        // Filter the osm_ids array based on the input pattern (starts with)
+        let matchingItems = routes.filter(item => item.route_short_name.toLowerCase().includes(input));
+        document.getElementsByClassName("dropdown-content")[0].style.display = "block";
+        // Display the matching items
+        displayMatchingItems(matchingItems);
+    }
+}
+
+function clearResults() {
+    // Assuming you have an element with the id "results" to display the matching items
+    let resultsElement = document.getElementById('results');
+
+    // Clear previous results
+    resultsElement.innerHTML = '';
+}
+
+function displayMatchingItems(matchingItems) {
+  // Assuming you have an element with the id "results" to display the matching items
+  let resultsElement = document.getElementById('results');
+
+  // Clear previous results
+  clearResults();
+
+  // Display the matching items
+  matchingItems.forEach(item => {
+      let listItem = document.createElement('li');
+      listItem.textContent = item.route_short_name;
+      resultsElement.appendChild(listItem);
+
+      listItem.addEventListener('mouseover', function () {
+        // Call a function to zoom in and flash the OSM feature
+        highlightRouteHover(item.route_id);
+      });
+
+      listItem.addEventListener('mouseout', function () {
+        // Call a function to zoom in and flash the OSM feature
+        resetHover();
+      });
+
+      // Add a click event listener to each list item
+      listItem.addEventListener('click', function () {
+          // Call a function to zoom in and flash the OSM feature
+          // highlightRouteHover(item.route_id);
+          highlightRouteClick(item.route_id);
+          addStopstoClickedLayer();
+      });
+  });
 }
