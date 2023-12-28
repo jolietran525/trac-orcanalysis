@@ -5,7 +5,7 @@ header {
   margin: 0;
   padding: 0;}
 
-body, p, ol, ul, td {
+body, p, ol, ul, td, label {
   font: 1em/1.5em sans-serif;
   font-size: 15px;
 }
@@ -78,7 +78,7 @@ td:first-child {font-weight: bold;}
 .legend {
   background-color: rgba(255, 255, 255, 1);
   border: 1px solid #ccc;
-  padding: 10px;
+  padding: 20px 15px 10px 15px;
   max-width: fit-content;
   z-index: 2;
 }
@@ -103,11 +103,10 @@ td:first-child {font-weight: bold;}
 
 .map-panel-tabs {
   position: absolute; /* or position: absolute; */
-  top: 30px; /* Adjust the top position as needed */
-  left: 0px; /* Adjust the left position as needed */
+  top: 10px; /* Adjust the top position as needed */
+  left: 10px; /* Adjust the left position as needed */
   flex-direction: column;
   width: fit-content;
-  margin-left: 2%; 
   z-index: 3;
   height: fit-content;
 }
@@ -130,7 +129,7 @@ td:first-child {font-weight: bold;}
   border-top-right-radius: 5px; 
   background: rgba(255, 255, 255, 1);
   display: inline-block;
-  padding: 15px;
+  padding: 10px 15px 10px 15px;
   width: fit-content;
   cursor: pointer;
 }
@@ -138,6 +137,12 @@ td:first-child {font-weight: bold;}
 .tab-1:hover, .tab-2:hover, .tab-3:hover {
   background-color: #c4f4ff;
 }
+
+.tab-1.active, .tab-2.active, .tab-3.active {
+  background: #3498db; /* Change the background color for the active tab */
+  color: #fff; /* Change the text color for the active tab */
+}
+
 
 .buttons {
   position: absolute;
@@ -147,14 +152,21 @@ td:first-child {font-weight: bold;}
   z-index: 3;
 }
 
+.buttons a {
+  color: #000075;
+}
+
+.buttons a:hover {
+  color: #911eb4;
+}
+
+.buttons a:active {
+  color: #e6194B;
+}
 
 .tab-item {
   padding:12px;
 }
-
-/* #text-description {
-  margin: 10px 10px 10px 10px;
-} */
 
 .form-container {
   flex-direction: column;
@@ -166,11 +178,17 @@ td:first-child {font-weight: bold;}
 #searchbar {
   display: block;
   background: transparent;
-  border: 1px solid rgba(61, 61, 61, 0.5);
+  border: 1px solid rgba(61, 61, 61, 0.3);
   z-index: 62;
   padding: 10px;
   box-sizing: border-box;
 }
+
+#searchbar:focus {
+  border: 2px solid #3498db; /* Change the border color when focused */
+  outline: none; /* Remove the default focus outline */
+}
+
 
 input[type=text] { 
   width: 100%; 
@@ -195,6 +213,7 @@ input:-webkit-autofill:active{
   width: 100%;
   overflow-y: auto; 
   max-height: 450px;
+  padding-top: 5px;
 }
 
 .dropdown-list {
@@ -206,9 +225,17 @@ input:-webkit-autofill:active{
 .dropdown-list li {
   padding: 10px;
   cursor: pointer;
-  font-size: 14px;
   transition: background-color 0.3s ease; /* Smooth background color transition */
 }
+
+#route-name {
+  border: 2px solid #3498db;
+  padding: 5px;
+  font-size: 15px;
+  border-radius: 5px;
+  margin-right: 5px;
+}
+
 
 .dropdown-list li:hover {
   background-color: rgba(220, 220, 220, 0.8);

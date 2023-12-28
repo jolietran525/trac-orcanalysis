@@ -96,6 +96,17 @@ let colors = ['#e6194b',
               '#000075'];
 
 
+/* -------- ROUTES JSON -------- */
+
+
+let routes;
+async function routes_data() {
+  const response = await fetch('./data/routes.json');
+  routes = await response.json();
+}
+routes_data();
+
+
 /* -------- ROUTES with STOPS LAYER -------- */
 
 let routeStopLayer;
@@ -165,7 +176,7 @@ t_routeShape.then(data => {
   }).addTo(map);
 
   highlightShape = L.geoJSON(null, {
-    style: function(e) { return { weight: 16, opacity: 0.5, color: 'orange' } } // Adjust the highlighted style
+    style: function(e) { return { weight: 16, opacity: 0.6, color: 'orange' } } // Adjust the highlighted style
   }).addTo(map);
   
   // add transparent layer to map
@@ -175,7 +186,7 @@ t_routeShape.then(data => {
 
   // add features to map
   routeShapeLayer  = L.geoJSON(routeShape, {
-      style: function(e) { return { weight: 2, opacity: 0.8, color:  "#a9a9a9" } }
+      style: function(e) { return { weight: 2, opacity: 0.5, color:  "#a9a9a9" } }
   }).addTo(map);
 
   // Add hover events
@@ -239,14 +250,17 @@ function highlightShapeHover(shape_id) {
 }
 
 let highlightedFeatures;
+let route_matched;
 function highlightRouteHover(route_id) {
   highlightedFeatures = routeShape.features.filter(feature => feature.properties.route_id === route_id);
   highlightLayer.clearLayers();
   highlightLayer.addData({ type: 'FeatureCollection', features: highlightedFeatures });
   highlightLayer.bringToBack();
-  
+
+  route_matched = routes.filter(item => item.route_id === route_id);
+
   document.getElementById('text-description').innerHTML = `<p> <strong>${highlightedFeatures[0].properties.agency_name}<strong></p>`;
-  document.getElementById('text-description').innerHTML += `<p>${highlightedFeatures[0].properties.route_short_name}</p>`;
+  document.getElementById('text-description').innerHTML += `<span id="route-name">${highlightedFeatures[0].properties.route_short_name}</span> <label>${route_matched[0].route_long_name}</label>`;
   document.getElementById('text-description').innerHTML += `<p>This route takes <strong>${highlightedFeatures.length}</strong> different shapes.</p>`;
 }
 
@@ -256,15 +270,18 @@ function highlightRouteClick(route_id) {
     resetClick(currentHighlightedRouteId);
   }
 
-  let legendHTML = `<h3>Route: ${highlightedFeatures[0].properties.route_short_name}</h3>`;
-  legendHTML += `<ul>`;
+  let legendHTML = `<span id="route-name">${highlightedFeatures[0].properties.route_short_name}</span> <label>${route_matched[0].route_long_name}</label>`;
+  legendHTML += `<ul style="margin-top:10px;">`;
 
   let shape_ids = [];
   let i = 0;
   highlightLayer.eachLayer(function (layer) {
     const feature = layer.feature;
     shape_ids.push(feature.properties.shape_id);
-    legendHTML  += `<li onclick="bringShapetoFront(${feature.properties.shape_id})" onmouseover="highlightShapeHover(${feature.properties.shape_id})" onmouseout="resetHover()"><span class="legend-color" style="background-color: ${colors[i]}" ></span><label><strong>${feature.properties.trips_count}</strong> trips made.</label></li>`;
+    legendHTML  += `<li onclick="bringShapetoFront(${feature.properties.shape_id})" onmouseover="highlightShapeHover(${feature.properties.shape_id})" onmouseout="resetHover()">
+                      <span class="legend-color" style="background-color: ${colors[i]}" ></span>
+                      <label><strong>${feature.properties.trips_count}</strong> trips made.</label>
+                    </li>`;
     i++;
   });
   legendHTML  += `</ul>`;
@@ -377,34 +394,26 @@ function activate_tab(n) {
     // Check if the current tab is the one to keep (n), show it, otherwise hide it
     if (i == n) {
       document.getElementById("tab-" + i).style.display = "block";
+      document.getElementsByClassName("tab-" + i)[0].className = `tab-${i} active`;
     } else {
       document.getElementById("tab-" + i).style.display = "none";
+      document.getElementsByClassName("tab-" + i)[0].className = `tab-${i}`;
     }
   }
 }
 
-let routes;
-async function routes_data() {
-  const response = await fetch('./data/routes.json');
-  routes = await response.json();
-}
-routes_data();
 
 function focusFormContainer() {
   // Get the form container element
   const formContainer = document.querySelector('.form-container');
-
-  // Add a class to simulate focus effect
-  formContainer.classList.add('focused');
   
-  document.getElementsByClassName("dropdown-content")[0].style.display = "block";
+  document.getElementsByClassName("dropdown-list")[0].style.display = "block";
   
   // Add an event listener to remove the class when clicking outside the form container
   document.addEventListener('click', function removeFocus(e) {
     if (!formContainer.contains(e.target)) {
-      formContainer.classList.remove('focused');
       document.removeEventListener('click', removeFocus);
-      document.getElementsByClassName("dropdown-content")[0].style.display = "none";
+      document.getElementsByClassName("dropdown-list")[0].style.display = "none";
     }
   });
 }
@@ -419,7 +428,7 @@ function search_function() {
     } else {
         // Filter the osm_ids array based on the input pattern (starts with)
         let matchingItems = routes.filter(item => item.route_short_name.toLowerCase().includes(input));
-        document.getElementsByClassName("dropdown-content")[0].style.display = "block";
+        // document.getElementsByClassName("dropdown-content")[0].style.display = "block";
         // Display the matching items
         displayMatchingItems(matchingItems);
     }
@@ -443,7 +452,7 @@ function displayMatchingItems(matchingItems) {
   // Display the matching items
   matchingItems.forEach(item => {
       let listItem = document.createElement('li');
-      listItem.textContent = item.route_short_name;
+      listItem.innerHTML = `<span id="route-name">${item.route_short_name}</span> ${item.route_long_name}`;
       resultsElement.appendChild(listItem);
 
       listItem.addEventListener('mouseover', function () {

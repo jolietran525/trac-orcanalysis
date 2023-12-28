@@ -53,8 +53,8 @@
       <div class="map-panel-tabs">
         <div class="b-tabs">
           <nav class="tabs" role="tablist" aria-orientation="horizontal">
-            <div class="tab-1" onclick="activate_tab(1)">
-              <a class="is-active">
+            <div class="tab-1 active" onclick="activate_tab(1)">
+              <a class="active">
                 <span class="">Routes</span>
               </a>
             </div>
@@ -88,14 +88,13 @@
             </div>
 
             <div class="tab-item" id="tab-2" tabindex="-1" id="departures" style="display: none;">
-              <div class="form-container"  onclick="focusFormContainer()">
+              <div class="form-container"   onclick="focusFormContainer()">
                 <div class="form">
                   <p style="font-size:120%"> <strong>Search routes</strong> </p>
                   <input id="searchbar" onkeyup="search_function()" placeholder="Search routes..." aria-autocomplete="list" class="input" type="text" autocomplete="off">
 
-                  <div class="dropdown-content">
-                    <ul class="dropdown-list" id="results">
-                    </ul>
+                  <div class="dropdown-content" style="padding-bottom: 10px;">
+                    <ul class="dropdown-list" id="results"></ul>
                   </div>
                 </div>
                
@@ -105,7 +104,7 @@
             <div class="tab-item" id="tab-3" tabindex="-1" id="options" style="display: none;">
               <div class="form">
                 <p style="font-size:120%"> <strong>Options</strong> </p>
-                <label class="checkbox">
+                <label class="checkbox" style="padding-bottom: 10px;">
                   <input type="checkbox" class="check" true-value="true" false-value="false" value="true">
                   <span class="control-label"> Show stops along the routes </span>
                 </label>
