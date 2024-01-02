@@ -4,7 +4,7 @@
 // TODO: build list of standard leaflet tilelayers
 class LeafletMap {
   // tag is html element for map, zoom and scale are positions (or null to hide)
-  constructor(_tag = 'map', _zoom = 'topright', _scale = 'bottomright', _layers = 'topright') {
+  constructor(_tag = 'map', _zoom = 'topright', _scale = 'bottomright', _layers = 'topright', _legend = 'bottomleft') {
     // arguments
     this._map = L.map(_tag, {zoomControl: false}).setView([47.60, -122.33], 12);
     
@@ -48,11 +48,11 @@ class LeafletMap {
     });
 
     this._baseLayers = {
-      "Light (CartoDB)": this.tiles_lght,
-      "Dark (CartoDB)": this.tiles_drk,
-      "Color (Voyager)": this.tiles_vgr,
-      "Satellite (ESRI)":  this.tiles_ewi,
-      "Terrain (ESRI)": this.tiles_ewt
+      "Light (CartoDB)"  : this._tiles_lght,
+      "Dark (CartoDB)"   : this._tiles_drk,
+      "Color (Voyager)"  : this._tiles_vgr,
+      "Satellite (ESRI)" : this._tiles_ewi,
+      "Terrain (ESRI)"   : this._tiles_ewt
     };
 
     this._overlayLayers = {};
@@ -62,6 +62,15 @@ class LeafletMap {
     if (_zoom) { L.control.zoom({position: _zoom}).addTo(this._map); }
     if (_scale) { L.control.scale({maxWidth: 200, position: _scale}).addTo(this._map); }
     if (_layers) { L.control.layers(this._baseLayers, this._overlayLayers, {position: _layers}).addTo(this._map); }
+    if (_legend) {
+      this._layerLegend = L.control({position: _legend});
+      this._layerLegend.onAdd = () => {
+        const _ldiv = L.DomUtil.create('div', 'legend');
+        _ldiv.style.display = 'none';
+        return _ldiv;
+      };
+      this._layerLegend.addTo(this._map);
+    }
 
     // other map elements
     this._time_control = null;

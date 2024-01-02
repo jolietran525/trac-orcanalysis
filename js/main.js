@@ -1,77 +1,80 @@
-let map = L.map('map', {zoomControl: false}).setView([47.60, -122.33], 10);
+// let map = L.map('map', {zoomControl: false}).setView([47.60, -122.33], 10);
 
 
-/* ---------------------- MAP TILES ---------------------- */
-let tiles_lght = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/{tileType}/{z}/{x}/{y}{r}.png', {
-    attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://cartodb.com/attributions">CARTO</a>',
-    subdomains: 'abcd',
-    tileType: 'light_all',
-    maxZoom: 20
-    }
-);
+// /* ---------------------- MAP TILES ---------------------- */
+// let tiles_lght = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/{tileType}/{z}/{x}/{y}{r}.png', {
+//     attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://cartodb.com/attributions">CARTO</a>',
+//     subdomains: 'abcd',
+//     tileType: 'light_all',
+//     maxZoom: 20
+//     }
+// );
 
-let tiles_drk = L.tileLayer('https://{s}.basemaps.cartocdn.com/{tileType}/{z}/{x}/{y}{r}.png', {
-    attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://cartodb.com/attributions">CARTO</a>',
-    subdomains: 'abcd',
-    tileType: 'dark_all',
-    maxZoom: 19
-  });
-
-
-let tiles_hyd = L.tileLayer('https://{s}.tile.openstreetmap.se/hydda/{tileType}/{z}/{x}/{y}.png', {
-    attribution: 'Tiles courtesy of <a href="http://openstreetmap.se/" target="_blank">OpenStreetMap Sweden</a>',
-    tileType: 'full',
-    maxZoom: 20
-});
-
-// cartodb voyager - types: voyager, voyager_nolabels, voyager_labels_under
-let tiles_vgr = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/{tileType}/{z}/{x}/{y}{r}.png', {
-    attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://cartodb.com/attributions">CARTO</a>',
-      subdomains: 'abcd',
-    tileType: 'voyager_labels_under',
-      maxZoom: 20
-  });
+// let tiles_drk = L.tileLayer('https://{s}.basemaps.cartocdn.com/{tileType}/{z}/{x}/{y}{r}.png', {
+//     attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://cartodb.com/attributions">CARTO</a>',
+//     subdomains: 'abcd',
+//     tileType: 'dark_all',
+//     maxZoom: 19
+//   });
 
 
-// esri world imagery satellite tiles
-let tiles_ewi = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-  });
+// let tiles_hyd = L.tileLayer('https://{s}.tile.openstreetmap.se/hydda/{tileType}/{z}/{x}/{y}.png', {
+//     attribution: 'Tiles courtesy of <a href="http://openstreetmap.se/" target="_blank">OpenStreetMap Sweden</a>',
+//     tileType: 'full',
+//     maxZoom: 20
+// });
 
-// esri world topo map tiles
-let tiles_ewt = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
-  });
-
-// default tile
-tiles_lght.addTo(map);
-
-let baseLayers = {
-    "Light (CartoDB)": tiles_lght,
-    "Dark (CartoDB)": tiles_drk,
-    "Color (Voyager)": tiles_vgr,
-    "Satellite (ESRI)":  tiles_ewi,
-    "Terrain (ESRI)": tiles_ewt
-};
+// // cartodb voyager - types: voyager, voyager_nolabels, voyager_labels_under
+// let tiles_vgr = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/{tileType}/{z}/{x}/{y}{r}.png', {
+//     attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://cartodb.com/attributions">CARTO</a>',
+//       subdomains: 'abcd',
+//     tileType: 'voyager_labels_under',
+//       maxZoom: 20
+//   });
 
 
-/* ---------------------- MAP CONTROL ---------------------- */
-L.control.zoom({position: 'topright'}).addTo(map);
-L.control.scale({maxWidth: 200, position: 'bottomright'}).addTo(map);
+// // esri world imagery satellite tiles
+// let tiles_ewi = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+//     attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+//   });
 
-let overlayLayers = {};
-let layerControl = L.control.layers(baseLayers,overlayLayers, {position: 'topright'}).addTo(map);
+// // esri world topo map tiles
+// let tiles_ewt = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+//       attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
+//   });
 
-let layerLegend = L.control({ position: 'bottomleft' });
+// // default tile
+// tiles_lght.addTo(map.map);
 
-layerLegend.onAdd = function (map) {
-  let div = L.DomUtil.create('div', 'legend');
-  div.style.display = 'none';
-  return div;
-};
+// let baseLayers = {
+//     "Light (CartoDB)": tiles_lght,
+//     "Dark (CartoDB)": tiles_drk,
+//     "Color (Voyager)": tiles_vgr,
+//     "Satellite (ESRI)":  tiles_ewi,
+//     "Terrain (ESRI)": tiles_ewt
+// };
 
-// Add the legend to the map
-layerLegend.addTo(map);
+
+// /* ---------------------- MAP CONTROL ---------------------- */
+// L.control.zoom({position: 'topright'}).addTo(map.map);
+// L.control.scale({maxWidth: 200, position: 'bottomright'}).addTo(map.map);
+
+// let overlayLayers = {};
+// let layerControl = L.control.layers(baseLayers,overlayLayers, {position: 'topright'}).addTo(map.map);
+
+// let layerLegend = L.control({ position: 'bottomleft' });
+
+// layerLegend.onAdd = function (map) {
+//   let div = L.DomUtil.create('div', 'legend');
+//   div.style.display = 'none';
+//   return div;
+// };
+
+// // Add the legend to the map
+// layerLegend.addTo(map.map);
+
+
+const map = new LeafletMap();
 
 /* ---------------------- GLOBAL VARIABLES / FUNCTIONS ---------------------- */
 // https://sashamaps.net/docs/resources/20-colors/
@@ -168,7 +171,7 @@ t_routeStop.then(data => {
       return L.circleMarker(geom, geojsonMarkerOptions);
     },
     onEachFeature: popup_attributes
-  }).addTo(map);
+  }).addTo(map.map);
   
 });
 
@@ -209,24 +212,24 @@ t_routeShape.then(data => {
   // add features to map
   routeShapeLayer  = L.geoJSON(routeShape, {
       style: function(e) { return { weight: 2, opacity: 0.5, color:  "#a9a9a9" } }
-  }).addTo(map);
+  }).addTo(map.map);
 
   // Highlight layer, default as NULL
   // This will be shown upon hovering on the transparent layer
   highlightLayer = L.geoJSON(null, {
     style: function(e) { return { weight: 16, opacity: 0.5, color: 'yellow' } } // Adjust the highlighted style
-  }).addTo(map);
+  }).addTo(map.map);
 
   // Highlight layer for the clicked route
   // Only shown upon hovering on the legend
   highlightShape = L.geoJSON(null, {
     style: function(e) { return { weight: 16, opacity: 0.6, color: 'orange' } } // Adjust the highlighted style
-  }).addTo(map);
+  }).addTo(map.map);
   
   // add transparent layer to map, this will not be shown, but only serves as a layer that will be used for hover functionality
   routeShapeLayer_transparent  = L.geoJSON(routeShape, {
     style: function(e) { return { weight: 18, opacity: 0} }
-  }).addTo(map);
+  }).addTo(map.map);
 
   // Add hover events to the transparent layer
   routeShapeLayer_transparent.on('mouseover', function (e) {
@@ -256,6 +259,17 @@ function bringShapetoFront(shape_id) {
   routeShapeLayer.eachLayer(function (layer) {
     if (layer.feature.properties.shape_id === shape_id) {
       layer.bringToFront();
+   
+      // Retrieve the decorator from the map
+      let decorator_shape = decoratorsMap.get(shape_id);
+      
+      // Bring the decorator to the front
+      if (decorator_shape) {
+        map.map.removeLayer(decorator_shape.start);
+        map.map.removeLayer(decorator_shape.end);
+        decorator_shape.start.addTo(map.map);
+        decorator_shape.end.addTo(map.map);
+      }
     }
   });
   routeStopLayer.bringToFront();
@@ -283,9 +297,12 @@ function highlightRouteHover(route_id) {
   document.getElementById('text-description').innerHTML += `<p>This route takes <strong>${highlightedFeatures.length}</strong> different shapes.</p>`;
 }
 
+let decoratorsMap = new Map();
+let startMarker = null;
+let endMarker = null;
 function highlightRouteClick(route_id) {
   // Reset the style of the previously highlighted route
-  if (currentHighlightedRouteId && currentHighlightedRouteId !== route_id) {
+  if (currentHighlightedRouteId) {
     resetClick(currentHighlightedRouteId);
   }
 
@@ -311,13 +328,44 @@ function highlightRouteClick(route_id) {
   routeShapeLayer.eachLayer(function (layer) {
     if (layer.feature.properties.route_id === route_id) {
       let shape_id = layer.feature.properties.shape_id;
-      layer.setStyle({ weight: 5, opacity: 0.75, color: getColorBasedOnTripsCount(shape_id, shape_ids) }); // Adjust the style as needed
+      let color_style = getColorBasedOnTripsCount(shape_id, shape_ids);
+      layer.setStyle({ weight: 5, opacity: 1, color: color_style }); // Adjust the style as needed
       layer.bringToFront();
-      currentHighlightedRouteId = route_id; // Update the currently highlighted route ID
+
+      // let polyline = L.polyline(L.GeoJSON.coordsToLatLngs(layer.feature.geometry.coordinates,  0, false));
+
+      // decorator = L.polylineDecorator(polyline, 
+      //     {   
+      //       patterns:
+      //         [
+      //           {
+      //             offset: 0,
+      //             endOffset: 0,
+      //             repeat: 150,
+      //             symbol: L.Symbol.arrowHead({pixelSize: 15, pathOptions: {stroke: true, fillOpacity: 1, weight: 0, color: color_style}})
+      //           }
+      //         ]
+      //     });
+      
+      // decorator.bringToFront();
+      // decoratorsMap.set(shape_id, decorator);
+
+
+      let coordinates = layer.feature.geometry.coordinates;
+      let startLatLng = L.latLng(coordinates[0][1], coordinates[0][0]).toBounds(50)	;
+      let endLatLng = L.latLng(coordinates[coordinates.length - 1][1], coordinates[coordinates.length - 1][0]);
+
+      startMarker = L.rectangle(startLatLng, {color: color_style, weight: 10}).addTo(map.map);
+      endMarker = L.circle(endLatLng, {radius: 50, weight: 10, color: color_style}).addTo(map.map);
+      startMarker.bringToFront();
+      endMarker.bringToFront();
+      // Store markers in the decoratorsMap with shape_id as key
+      decoratorsMap.set(shape_id, { start: startMarker, end: endMarker });
     }
   });
-
+  
   checkbox.checked = true;
+  currentHighlightedRouteId = route_id; // Update the currently highlighted route ID
 }
 
 
@@ -329,19 +377,34 @@ function resetHover() {
   highlightShape.clearLayers();
 }
 
-function resetClick(route_id) {
+
+function resetClick(route_id) {  
   routeShapeLayer.eachLayer(function (layer) {
     if (layer.feature.properties.route_id === route_id) {
       routeShapeLayer.resetStyle(layer);
+
+      let shape_id = layer.feature.properties.shape_id;
+      let markers = decoratorsMap.get(shape_id);
+
+      if (markers) {
+        markers.start.remove();
+        markers.end.remove();
+      }
     }
   });
+
   routeStopLayer.clearLayers();
   currentHighlightedRouteId = null;
+
   document.getElementsByClassName('legend')[0].innerHTML = "";
   document.getElementsByClassName('legend')[0].style.display = 'none';
-  checkbox.checked = false;
-}
 
+  checkbox.checked = false;
+
+  // Clear the decoratorsMap
+  decoratorsMap.clear();
+
+}
 
 
 
