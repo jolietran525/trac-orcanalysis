@@ -260,16 +260,29 @@ function bringShapetoFront(shape_id) {
     if (layer.feature.properties.shape_id === shape_id) {
       layer.bringToFront();
    
-      // Retrieve the decorator from the map
       let decorator_shape = decoratorsMap.get(shape_id);
-      
-      // Bring the decorator to the front
-      if (decorator_shape) {
-        decorator_shape.start.bringToFront();
-        decorator_shape.end.bringToFront();
+
+      // Check if the decorator is currently on the map
+      const isDecoratorShown = map.map.hasLayer(decorator_shape.start) && map.map.hasLayer(decorator_shape.end);
+
+      // If it's shown, remove it; otherwise, add it to the map
+      if (isDecoratorShown) {
+        map.map.removeLayer(decorator_shape.start);
+        map.map.removeLayer(decorator_shape.end);
+      } else {
+        decoratorsMap.forEach(function(value, key) {
+          if (key !== shape_id) {
+            map.map.removeLayer(value.start);
+            map.map.removeLayer(value.end);
+          } else {
+            decorator_shape.start.addTo(map.map);
+            decorator_shape.end.addTo(map.map);
+          }
+        });
       }
-    }
-  });
+      
+    
+  }});
   routeStopLayer.bringToFront();
 }
 
@@ -334,28 +347,32 @@ function highlightRouteClick(route_id) {
       let startLatLng = L.latLng(coordinates[0][1], coordinates[0][0])	;
       let endLatLng = L.latLng(coordinates[coordinates.length - 1][1], coordinates[coordinates.length - 1][0]);
 
-      startMarker = L.circleMarker(startLatLng, {radius: 12, weight: 3, color: color_style, fillOpacity: 0.8, fillColor: 'white'}).addTo(map.map);
-      endMarker = L.circleMarker(endLatLng, {radius: 12, weight: 3, color: color_style, fillOpacity: 0.8}).addTo(map.map);
+      startMarker = L.circleMarker(startLatLng, {radius: 10, weight: 3, color: color_style, fillOpacity: 1, fillColor: 'white'});
+      // endMarker = L.circleMarker(endLatLng, {radius: 12, weight: 3, color: color_style, fillOpacity: 0.8}).addTo(map.map);
 
-      // const markerHtmlStyles = `
-      //   color: ${color_style};
-      //   width: 10px;
-      //   height: 10px;
-      //   display: block;
-      //   left: 0;
-      //   top: 0;
-      //   position: relative;`
+      const markerHtmlStyles = `
+        background-color: ${color_style};
+        width: 1.25rem;
+        height: 1.25rem;
+        display: block;
+        left: -1.5rem;
+        top: -1.5rem;
+        position: relative;
+        border-radius: 3rem 3rem 0;
+        transform: rotate(45deg);
+        border: 3px solid #FFFFFF;`
 
-      // const icon = L.divIcon({
-      //   iconAnchor: [0, 0],
-      //   iconSize: [0,0],
-      //   html: `<span style="${markerHtmlStyles}"><i class="fa-solid fa-map-pin" style:"height:100px; width:100px;"></i></span>`
-      // })
+      const icon = L.divIcon({
+        iconAnchor: [-10, 9],
+        labelAnchor: [-6, 0],
+        iconSize: [0,0],
+        html: `<span style="${markerHtmlStyles}" />`
+      })
 
-      // endMarker = L.marker(endLatLng, {icon: icon}).addTo(map.map);
+      endMarker = L.marker(endLatLng, {icon: icon});
 
       startMarker.bringToFront();
-      endMarker.bringToFront();
+      // endMarker.bringToFront();
       // Store markers in the decoratorsMap with shape_id as key
       decoratorsMap.set(shape_id, { start: startMarker, end: endMarker });
     }
@@ -381,11 +398,11 @@ function resetClick(route_id) {
       routeShapeLayer.resetStyle(layer);
 
       let shape_id = layer.feature.properties.shape_id;
-      let markers = decoratorsMap.get(shape_id);
+      let decorator_shape = decoratorsMap.get(shape_id);
 
-      if (markers) {
-        markers.start.remove();
-        markers.end.remove();
+      if (decorator_shape) {
+        decorator_shape.start.remove();
+        decorator_shape.end.remove();
       }
     }
   });
