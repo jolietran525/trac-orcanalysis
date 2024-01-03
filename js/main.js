@@ -265,10 +265,8 @@ function bringShapetoFront(shape_id) {
       
       // Bring the decorator to the front
       if (decorator_shape) {
-        map.map.removeLayer(decorator_shape.start);
-        map.map.removeLayer(decorator_shape.end);
-        decorator_shape.start.addTo(map.map);
-        decorator_shape.end.addTo(map.map);
+        decorator_shape.start.bringToFront();
+        decorator_shape.end.bringToFront();
       }
     }
   });
@@ -332,31 +330,30 @@ function highlightRouteClick(route_id) {
       layer.setStyle({ weight: 5, opacity: 1, color: color_style }); // Adjust the style as needed
       layer.bringToFront();
 
-      // let polyline = L.polyline(L.GeoJSON.coordsToLatLngs(layer.feature.geometry.coordinates,  0, false));
-
-      // decorator = L.polylineDecorator(polyline, 
-      //     {   
-      //       patterns:
-      //         [
-      //           {
-      //             offset: 0,
-      //             endOffset: 0,
-      //             repeat: 150,
-      //             symbol: L.Symbol.arrowHead({pixelSize: 15, pathOptions: {stroke: true, fillOpacity: 1, weight: 0, color: color_style}})
-      //           }
-      //         ]
-      //     });
-      
-      // decorator.bringToFront();
-      // decoratorsMap.set(shape_id, decorator);
-
-
       let coordinates = layer.feature.geometry.coordinates;
-      let startLatLng = L.latLng(coordinates[0][1], coordinates[0][0]).toBounds(50)	;
+      let startLatLng = L.latLng(coordinates[0][1], coordinates[0][0])	;
       let endLatLng = L.latLng(coordinates[coordinates.length - 1][1], coordinates[coordinates.length - 1][0]);
 
-      startMarker = L.rectangle(startLatLng, {color: color_style, weight: 10}).addTo(map.map);
-      endMarker = L.circle(endLatLng, {radius: 50, weight: 10, color: color_style}).addTo(map.map);
+      startMarker = L.circleMarker(startLatLng, {radius: 12, weight: 3, color: color_style, fillOpacity: 0.8, fillColor: 'white'}).addTo(map.map);
+      endMarker = L.circleMarker(endLatLng, {radius: 12, weight: 3, color: color_style, fillOpacity: 0.8}).addTo(map.map);
+
+      // const markerHtmlStyles = `
+      //   color: ${color_style};
+      //   width: 10px;
+      //   height: 10px;
+      //   display: block;
+      //   left: 0;
+      //   top: 0;
+      //   position: relative;`
+
+      // const icon = L.divIcon({
+      //   iconAnchor: [0, 0],
+      //   iconSize: [0,0],
+      //   html: `<span style="${markerHtmlStyles}"><i class="fa-solid fa-map-pin" style:"height:100px; width:100px;"></i></span>`
+      // })
+
+      // endMarker = L.marker(endLatLng, {icon: icon}).addTo(map.map);
+
       startMarker.bringToFront();
       endMarker.bringToFront();
       // Store markers in the decoratorsMap with shape_id as key
