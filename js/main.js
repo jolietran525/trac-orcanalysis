@@ -327,7 +327,7 @@ function highlightRouteClick(route_id) {
     shape_ids.push(feature.properties.shape_id);
     legendHTML  += `<li onclick="bringShapetoFront(${feature.properties.shape_id})" onmouseover="highlightShapeHover(${feature.properties.shape_id})" onmouseout="resetHover()">
                       <span class="legend-color" style="background-color: ${colors[i]}" ></span>
-                      <label><strong>${feature.properties.trips_count}</strong> trips made.</label>
+                      <label><strong>${feature.properties.trips_count}</strong> trips made</label>
                     </li>`;
     i++;
   });

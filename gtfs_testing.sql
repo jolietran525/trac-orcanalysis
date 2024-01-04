@@ -127,7 +127,7 @@ FROM (
 	ORDER BY t.route_id ASC, COUNT(t.trip_id) DESC
 ) AS t;
 
-SELECT * FROM trips
+
 -- show distinct stops along the route:
 -- Create a Feature Collection GeoJSON
 SELECT 
@@ -145,14 +145,33 @@ FROM(
 	ORDER BY t.route_id, st.stop_id 
 ) AS t;
 
--- Show all distinct stops along the route for each distinct shape
-SELECT 
- json_object_agg("shape_id", "stop_id")
+
+
+-- Show all stops along the route for each distinct shape with the stop sequence
+SELECT
+  json_object_agg(
+    shape_id,
+    json_build_object(
+      'stop_id', stop_id,
+      'stop_sequence', stop_sequence,
+      'stop_rank', stop_rank, 
+      'time', fake_timestamp
+    )
+  ) AS result
 FROM (
-	SELECT DISTINCT t.shape_id, st.stop_id
-	FROM trips t
-	JOIN stop_times st 
-		ON st.trip_id = t.trip_id
-	ORDER BY t.shape_id ASC
+	WITH dist AS (
+		SELECT DISTINCT t.shape_id, st.stop_id, st.stop_sequence
+		FROM trips t
+		JOIN stop_times st 
+			ON st.trip_id = t.trip_id
+		ORDER BY t.shape_id, st.stop_sequence ASC
+		)
+	SELECT shape_id, stop_id, stop_sequence,
+		RANK() OVER (PARTITION BY shape_id ORDER BY stop_sequence ASC) AS stop_rank,
+		TIME '00:00:01' + INTERVAL '1 second' * (RANK() OVER (PARTITION BY shape_id ORDER BY stop_sequence ASC) - 1) AS fake_timestamp
+	FROM dist
 ) AS t;
+
+
+
 
