@@ -79,7 +79,7 @@ td:first-child {font-weight: bold;}
   background-color: rgba(255, 255, 255, 1);
   border: 1px solid #ccc;
   padding: 20px 15px 10px 15px;
-  max-width: fit-content;
+  max-width: 200px;
   z-index: 2;
 }
 

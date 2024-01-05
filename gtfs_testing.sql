@@ -145,30 +145,31 @@ FROM(
 	ORDER BY t.route_id, st.stop_id 
 ) AS t;
 
-
+SELECT * FROM routes
+WHERE route_short_name = '125';
 
 -- Show all stops along the route for each distinct shape with the stop sequence
 SELECT
-  json_object_agg(
-    shape_id,
-    json_build_object(
-      'stop_id', stop_id,
-      'stop_sequence', stop_sequence,
-      'stop_rank', stop_rank, 
-      'time', fake_timestamp
-    )
-  ) AS result
+	json_build_object(
+	    'type', 'FeatureCollection',
+	    'features', json_agg(ST_AsGeoJSON(t.*)::json)
+	)
 FROM (
 	WITH dist AS (
-		SELECT DISTINCT t.shape_id, st.stop_id, st.stop_sequence
+		SELECT DISTINCT t.shape_id, st.stop_id, st.stop_sequence, s.geom
 		FROM trips t
 		JOIN stop_times st 
 			ON st.trip_id = t.trip_id
+		JOIN stops s
+			ON s.stop_id = st.stop_id
+		WHERE t.route_id = 100024 -- route 125
 		ORDER BY t.shape_id, st.stop_sequence ASC
 		)
-	SELECT shape_id, stop_id, stop_sequence,
+	SELECT shape_id, stop_id, stop_sequence, -- arrival_time::TIME, departure_time::TIME,
 		RANK() OVER (PARTITION BY shape_id ORDER BY stop_sequence ASC) AS stop_rank,
-		TIME '00:00:01' + INTERVAL '1 second' * (RANK() OVER (PARTITION BY shape_id ORDER BY stop_sequence ASC) - 1) AS fake_timestamp
+		TIMESTAMP '2024-01-01' + INTERVAL '1 minute' * (RANK() OVER (PARTITION BY shape_id ORDER BY stop_sequence ASC) - 1) AS start,
+		TIMESTAMP '2024-01-01' + INTERVAL '1 minute' * (RANK() OVER (PARTITION BY shape_id ORDER BY stop_sequence ASC) - 1) AS end,
+		geom
 	FROM dist
 ) AS t;
 

@@ -1,79 +1,3 @@
-// let map = L.map('map', {zoomControl: false}).setView([47.60, -122.33], 10);
-
-
-// /* ---------------------- MAP TILES ---------------------- */
-// let tiles_lght = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/{tileType}/{z}/{x}/{y}{r}.png', {
-//     attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://cartodb.com/attributions">CARTO</a>',
-//     subdomains: 'abcd',
-//     tileType: 'light_all',
-//     maxZoom: 20
-//     }
-// );
-
-// let tiles_drk = L.tileLayer('https://{s}.basemaps.cartocdn.com/{tileType}/{z}/{x}/{y}{r}.png', {
-//     attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://cartodb.com/attributions">CARTO</a>',
-//     subdomains: 'abcd',
-//     tileType: 'dark_all',
-//     maxZoom: 19
-//   });
-
-
-// let tiles_hyd = L.tileLayer('https://{s}.tile.openstreetmap.se/hydda/{tileType}/{z}/{x}/{y}.png', {
-//     attribution: 'Tiles courtesy of <a href="http://openstreetmap.se/" target="_blank">OpenStreetMap Sweden</a>',
-//     tileType: 'full',
-//     maxZoom: 20
-// });
-
-// // cartodb voyager - types: voyager, voyager_nolabels, voyager_labels_under
-// let tiles_vgr = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/{tileType}/{z}/{x}/{y}{r}.png', {
-//     attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://cartodb.com/attributions">CARTO</a>',
-//       subdomains: 'abcd',
-//     tileType: 'voyager_labels_under',
-//       maxZoom: 20
-//   });
-
-
-// // esri world imagery satellite tiles
-// let tiles_ewi = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-//     attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-//   });
-
-// // esri world topo map tiles
-// let tiles_ewt = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
-//       attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
-//   });
-
-// // default tile
-// tiles_lght.addTo(map.map);
-
-// let baseLayers = {
-//     "Light (CartoDB)": tiles_lght,
-//     "Dark (CartoDB)": tiles_drk,
-//     "Color (Voyager)": tiles_vgr,
-//     "Satellite (ESRI)":  tiles_ewi,
-//     "Terrain (ESRI)": tiles_ewt
-// };
-
-
-// /* ---------------------- MAP CONTROL ---------------------- */
-// L.control.zoom({position: 'topright'}).addTo(map.map);
-// L.control.scale({maxWidth: 200, position: 'bottomright'}).addTo(map.map);
-
-// let overlayLayers = {};
-// let layerControl = L.control.layers(baseLayers,overlayLayers, {position: 'topright'}).addTo(map.map);
-
-// let layerLegend = L.control({ position: 'bottomleft' });
-
-// layerLegend.onAdd = function (map) {
-//   let div = L.DomUtil.create('div', 'legend');
-//   div.style.display = 'none';
-//   return div;
-// };
-
-// // Add the legend to the map
-// layerLegend.addTo(map.map);
-
-
 const map = new LeafletMap();
 
 /* ---------------------- GLOBAL VARIABLES / FUNCTIONS ---------------------- */
@@ -112,6 +36,8 @@ let routeStop;
 
 // this is the variable that stores the layer of shapes for each route, with the 
 let routeShapeLayer;
+
+// This is the variable that stores the route_shape.geojson data
 let routeShape;
 let highlightLayer;
 let currentHighlightedRouteId = null; // Global variable to store the currently highlighted route ID
@@ -170,7 +96,9 @@ t_routeStop.then(data => {
     pointToLayer: function (feature, geom) {
       return L.circleMarker(geom, geojsonMarkerOptions);
     },
-    onEachFeature: popup_attributes
+    onEachFeature: (feature, layer) => {
+      layer.bindTooltip(`<strong>Stop ID:</strong> ${feature.properties.stop_id}`)
+    }
   }).addTo(map.map);
   
 });
@@ -311,13 +239,37 @@ function highlightRouteHover(route_id) {
 let decoratorsMap = new Map();
 let startMarker = null;
 let endMarker = null;
+let markerHtmlStyles;
 function highlightRouteClick(route_id) {
   // Reset the style of the previously highlighted route
   if (currentHighlightedRouteId) {
     resetClick(currentHighlightedRouteId);
   }
 
-  let legendHTML = `<span id="route-name">${highlightedFeatures[0].properties.route_short_name}</span> <label>${route_matched[0].route_long_name}</label>`;
+  let legendHTML = `<p style="margin-top:0"><strong>${highlightedFeatures[0].properties.agency_name}</strong></p>`;
+  legendHTML += `<span id="route-name">${highlightedFeatures[0].properties.route_short_name}</span> <label>${route_matched[0].route_long_name}</label><br><br>`;
+  legendHTML += `<span style="background-color: #FFFFFF;
+                        width: 1rem;
+                        height: 1rem;
+                        display: inline-block;
+                        border-radius: 50%;
+                        border: 3px solid #000000;
+                        margin-top: 5px;
+                        vertical-align: text-bottom;
+                        margin-right: 10px;"></span> <label style="display: inline-block;">Start</label>`;
+  legendHTML += `<i class="fa-solid fa-location-dot"
+                    style="
+                        background: none;
+                        color: #FFFFFF;
+                        -webkit-text-stroke-width: 2.5px;
+                        -webkit-text-stroke-color: #000000;
+                        font-size: 1.25rem;
+                        display: inline-block;
+                        vertical-align: text-bottom;
+                        margin-top: 5px;
+                        margin-left: 15px;
+                        margin-right: 10px;"></i> <label style="display: inline-block;">End</label>`;
+  legendHTML += `<p style="font-size: small;"><em>Click on the shape to show/hide the start and end point</em></p>`;
   legendHTML += `<ul style="margin-top:10px;">`;
 
   let shape_ids = [];
@@ -347,32 +299,29 @@ function highlightRouteClick(route_id) {
       let startLatLng = L.latLng(coordinates[0][1], coordinates[0][0])	;
       let endLatLng = L.latLng(coordinates[coordinates.length - 1][1], coordinates[coordinates.length - 1][0]);
 
-      startMarker = L.circleMarker(startLatLng, {radius: 10, weight: 3, color: color_style, fillOpacity: 1, fillColor: 'white'});
+      startMarker = L.circleMarker(startLatLng, {radius: 9, weight: 3, color: color_style, fillOpacity: 1, fillColor: 'white'});
       // endMarker = L.circleMarker(endLatLng, {radius: 12, weight: 3, color: color_style, fillOpacity: 0.8}).addTo(map.map);
 
-      const markerHtmlStyles = `
-        background-color: ${color_style};
-        width: 1.25rem;
-        height: 1.25rem;
-        display: block;
-        left: -1.5rem;
-        top: -1.5rem;
-        position: relative;
-        border-radius: 3rem 3rem 0;
-        transform: rotate(45deg);
-        border: 3px solid #FFFFFF;`
+      markerHtmlStyles = `
+          background: none;
+          color: #FFFFFF;
+          -webkit-text-stroke-width: 3px;
+          -webkit-text-stroke-color:${color_style};
+          font-size: 1.5rem;
+          left: -0.6rem;
+          top: -1.5rem;
+          position: relative;`
 
       const icon = L.divIcon({
-        iconAnchor: [-10, 9],
-        labelAnchor: [-6, 0],
+        iconAnchor: [0, 0],
+        labelAnchor: [0,0],
         iconSize: [0,0],
-        html: `<span style="${markerHtmlStyles}" />`
+        tooltipAnchor: [0,0],
+        html: `<i class="fa-solid fa-location-dot" style="${markerHtmlStyles}"></i>`
       })
 
       endMarker = L.marker(endLatLng, {icon: icon});
 
-      startMarker.bringToFront();
-      // endMarker.bringToFront();
       // Store markers in the decoratorsMap with shape_id as key
       decoratorsMap.set(shape_id, { start: startMarker, end: endMarker });
     }
