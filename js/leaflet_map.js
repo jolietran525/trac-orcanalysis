@@ -6,7 +6,7 @@ class LeafletMap {
   // tag is html element for map, zoom and scale are positions (or null to hide)
   constructor(_tag = 'map', _zoom = 'topright', _scale = 'bottomright', _layers = 'topright', _legend = 'bottomleft') {
     // arguments
-    this._map = L.map(_tag, {zoomControl: false}).setView([47.60, -122.33], 12);
+    this._map = L.map(_tag, {zoomControl: false}).setView([47.60, -122.33], 10);
     
     this._tiles_lght = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/{tileType}/{z}/{x}/{y}{r}.png', {
       attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://cartodb.com/attributions">CARTO</a>',

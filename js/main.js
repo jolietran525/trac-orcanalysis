@@ -269,7 +269,7 @@ function highlightRouteClick(route_id) {
                         margin-top: 5px;
                         margin-left: 15px;
                         margin-right: 10px;"></i> <label style="display: inline-block;">End</label>`;
-  legendHTML += `<p style="font-size: small;"><em>Click on the shape to show/hide the start and end point</em></p>`;
+  legendHTML += `<p style="font-size: small;"><em>Click on the shape to show/hide<br>the start and end point</em></p>`;
   legendHTML += `<ul style="margin-top:10px;">`;
 
   let shape_ids = [];
@@ -300,7 +300,6 @@ function highlightRouteClick(route_id) {
       let endLatLng = L.latLng(coordinates[coordinates.length - 1][1], coordinates[coordinates.length - 1][0]);
 
       startMarker = L.circleMarker(startLatLng, {radius: 9, weight: 3, color: color_style, fillOpacity: 1, fillColor: 'white'});
-      // endMarker = L.circleMarker(endLatLng, {radius: 12, weight: 3, color: color_style, fillOpacity: 0.8}).addTo(map.map);
 
       markerHtmlStyles = `
           background: none;
