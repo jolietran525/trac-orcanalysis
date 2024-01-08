@@ -81,8 +81,24 @@ td:first-child {font-weight: bold;}
   border: 1px solid #ccc;
   padding: 20px 15px 10px 15px;
   max-width: 225px;
+  max-height: 50vh;
+  overflow-y: auto;
   z-index: 2;
 }
+
+.grid-container {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 10px;
+  background: transparent;
+  /* padding: 10px; */
+}
+
+.grid-container > div {
+  background: transparent;
+  text-align: left;
+}
+
 
 .legend ul {
   list-style: none;
@@ -110,6 +126,7 @@ td:first-child {font-weight: bold;}
   width: fit-content;
   z-index: 3;
   height: fit-content;
+  max-height: 50vh;
 }
 
 .tabs {
@@ -171,7 +188,6 @@ td:first-child {font-weight: bold;}
 
 .form-container {
   flex-direction: column;
-  height: fit-content;
   width: 100%;
   box-sizing: border-box; /* Ensure box-sizing is set */
 }
@@ -213,7 +229,7 @@ input:-webkit-autofill:active{
   border: none;
   width: 100%;
   overflow-y: auto; 
-  max-height: 450px;
+  max-height: 30vh;
   padding-top: 5px;
 }
 

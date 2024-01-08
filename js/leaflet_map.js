@@ -67,11 +67,25 @@ class LeafletMap {
       this._layerLegend.onAdd = () => {
         const _ldiv = L.DomUtil.create('div', 'legend');
         _ldiv.style.display = 'none';
+
+        // Disable dragging, double click zoom and scroll wheel zoom when the mouse is over the legend
+        _ldiv.addEventListener('mouseover', () => {
+          this._map.dragging.disable();
+          this._map.doubleClickZoom.disable();
+          this._map.scrollWheelZoom.disable();
+        });
+    
+        // Re-enable dragging, double click zoom and scroll wheel zoom when the mouse leaves the legend
+        _ldiv.addEventListener('mouseout', () => {
+          this._map.dragging.enable();
+          this._map.doubleClickZoom.enable();
+          this._map.scrollWheelZoom.enable();
+        });
+
         return _ldiv;
       };
       this._layerLegend.addTo(this._map);
     }
-
     // other map elements
     this._time_control = null;
 

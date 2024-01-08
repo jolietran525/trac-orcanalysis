@@ -248,27 +248,26 @@ function highlightRouteClick(route_id) {
 
   let legendHTML = `<p style="margin-top:0"><strong>${highlightedFeatures[0].properties.agency_name}</strong></p>`;
   legendHTML += `<span id="route-name">${highlightedFeatures[0].properties.route_short_name}</span> <label>${route_matched[0].route_long_name}</label><br><br>`;
-  legendHTML += `<span style="background-color: #FFFFFF;
+  legendHTML += `<div class="grid-container"><div class="item1">
+                    <span style="background-color: #FFFFFF;
                         width: 1rem;
                         height: 1rem;
                         display: inline-block;
                         border-radius: 50%;
                         border: 3px solid #000000;
-                        margin-top: 5px;
                         vertical-align: text-bottom;
-                        margin-right: 10px;"></span> <label style="display: inline-block;">Start</label>`;
-  legendHTML += `<i class="fa-solid fa-location-dot"
+                        margin-right: 10px;">
+                    </span>
+                    <label>Start</label></div>`;
+  legendHTML += `<div class="item2"><i class="fa-solid fa-location-dot"
                     style="
                         background: none;
                         color: #FFFFFF;
                         -webkit-text-stroke-width: 2.5px;
                         -webkit-text-stroke-color: #000000;
                         font-size: 1.25rem;
-                        display: inline-block;
                         vertical-align: text-bottom;
-                        margin-top: 5px;
-                        margin-left: 15px;
-                        margin-right: 10px;"></i> <label style="display: inline-block;">End</label>`;
+                        margin-right: 10px;"></i> <label>End</label></div></div>`;
   legendHTML += `<p style="font-size: small;"><em>Click on the shape to show/hide<br>the start and end point</em></p>`;
   legendHTML += `<ul style="margin-top:10px;">`;
 
@@ -506,6 +505,7 @@ function displayMatchingItems(matchingItems) {
       listItem.addEventListener('click', function () {
           highlightRouteClick(item.route_id);
           addStopstoClickedLayer();
+          document.getElementsByClassName("dropdown-list")[0].style.display = "none"; // hide the drop-down content if one element is clicked
       });
   });
 }
