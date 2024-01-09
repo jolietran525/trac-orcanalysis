@@ -1,8 +1,9 @@
+// Load map from the leaflet_map.js class
 const map = new LeafletMap();
 
 /* ---------------------- GLOBAL VARIABLES / FUNCTIONS ---------------------- */
 // https://sashamaps.net/docs/resources/20-colors/
-// This is the array that stores a list of color
+// Global array that stores a list of color
 let colors = ['#e6194b',
               '#3cb44b', 
               '#4363d8', 
@@ -22,42 +23,47 @@ let colors = ['#e6194b',
               '#ffd8b1', 
               '#000075'];
 
-// this is the variable that stores the checkbox in the Options tab in HTML doc
-let checkbox;
+// Global variable that stores the stops_checkbox in the Options tab in HTML doc
+let stops_checkbox;
 
-// This is the variable that stores the routes.json data
+// Global variable that stores the routes.json data
 let routes;
 
-// This is the variable that stores the layer of stops along each route
+// Global variable that stores the layer of stops along each route
 let routeStopLayer;
 
-// This is the variable that stores the source data for the routeStopLayer
+// Global that stores the source data for the routeStopLayer
 let routeStop;
 
-// this is the variable that stores the layer of shapes for each route, with the 
-let routeShapeLayer;
+// Global variable that stores the layer of shapes for each route, with the 
+let routeShapeLayer_base;
 
-// This is the variable that stores the route_shape.geojson data
+// Global variable that stores the route_shape.geojson data
 let routeShape;
-let highlightLayer;
-let currentHighlightedRouteId = null; // Global variable to store the currently highlighted route ID
 
-function popup_attributes(feature, layer) {
-  let html = '<table>';
-  for (attrib in feature.properties) {
-      html += '<tr><td>' + attrib + '</td><td>' + feature.properties[attrib] + '</td></tr>';
-  }
-  layer.bindPopup(html + '</table>');
-}
+// Global variable that stores the layer with highlighted route upon hover data
+let highlightRoute;
 
-const btn = document.getElementById("refresh_button");
-btn.addEventListener("click", function () {
+// Global variable that stores the currently clicked-on route_id
+let currentHighlightedRouteId = null;
+
+// Global variable that stores the refresh button from the HTML
+const refresh_btn = document.getElementById("refresh_button");
+
+// Add the event to the refresh_button, if there is any clicked-on route, unclick it and reset the style
+refresh_btn.addEventListener("click", function () {
   resetHover();
   resetClick(currentHighlightedRouteId);
 });
 
-
-function getColorBasedOnTripsCount(shape_id, shape_ids) {
+/**
+ * Gets the color associated with a specific shape ID from a given array of shape IDs.
+ *
+ * @param {int} shape_id - The shape ID to find the color for.
+ * @param {int[]} shape_ids - An array of shape IDs to search for a match.
+ * @returns {string} - The color associated with the given shape ID, or undefined if not found.
+ */
+function getColorForEachShape(shape_id, shape_ids) {
   for (let i = 0; i < shape_ids.length; i++) {
     if (shape_id === shape_ids[i]) {
       return colors[i];
@@ -68,19 +74,26 @@ function getColorBasedOnTripsCount(shape_id, shape_ids) {
 
 /* -------- ROUTES JSON -------- */
 
+/**
+ * Asynchronously fetches route data from the 'routes.json' file and assigns it to the 'routes' variable.
+ * This function should be called to initialize the 'routes' variable with the fetched data.
+ */
 async function routes_data() {
   const response = await fetch('./data/routes.json');
   routes = await response.json();
 }
+
+// Call the routes_data function to fetch and initialize route data
 routes_data();
 
 
 /* -------- ROUTES with STOPS LAYER -------- */
+// Fetch stops data for each route (routes_stops) using d3.json
 const t_routeStop = d3.json("data/routes_stops.geojson");
 t_routeStop.then(data => {
   routeStop = data;
 
-  // add features to map
+  // Define marker options for the stops on the map
   var geojsonMarkerOptions = {
     radius: 3.5,
     fillColor: "#ffffff",
@@ -90,13 +103,15 @@ t_routeStop.then(data => {
     fillOpacity: 1
   };
 
-  // Default layer to NULL, we will only add the stops to map only
-  // when we click on the route shape layer
+  // Create a GeoJSON layer for route stops, initially set to NULL
+  // Stops will be added to the map only when clicking on the route shape layer
   routeStopLayer  = L.geoJSON(null, {
     pointToLayer: function (feature, geom) {
+      // Create a circle marker for each stop using the specified options
       return L.circleMarker(geom, geojsonMarkerOptions);
     },
     onEachFeature: (feature, layer) => {
+      // Add a tooltip to each stop layer displaying the Stop ID
       layer.bindTooltip(`<strong>Stop ID:</strong> ${feature.properties.stop_id}`)
     }
   }).addTo(map.map);
@@ -104,57 +119,18 @@ t_routeStop.then(data => {
 });
 
 
-// This function will be triggered when routeShape layer is clicked
-// as the result, the stops geometry will be displayed for that clicked route
-function addStopstoClickedLayer() {
-  const routeStopFeatures = routeStop.features.filter(feature =>
-      feature.properties.route_id === currentHighlightedRouteId 
-  );
-
-  routeStopLayer.clearLayers();
-  routeStopLayer.addData({ type: 'FeatureCollection', features: routeStopFeatures });
-}
-
-// Add an event listener to the checkbox element
-checkbox = document.querySelector('.check');
-checkbox.addEventListener('change', toggleRouteStopLayer);
-
-// This function will allow user to show or hide the stops to their preferences
-// when they click on the route shape layer
-function toggleRouteStopLayer() {  
-  let showStops = checkbox.checked;
-  // Toggle the visibility of the routeStopLayer
-  if (showStops) {
-    addStopstoClickedLayer();
-  } else {
-    routeStopLayer.clearLayers();
-  }
-}
-
-
 /* -------- ROUTES with SHAPES LAYER -------- */
+// Fetch shapes data for each route (routes_shapes) using d3.json
 const t_routeShape = d3.json("data/routes_shapes.geojson");
 t_routeShape.then(data => {
   routeShape = data;
 
-  // add features to map
-  routeShapeLayer  = L.geoJSON(routeShape, {
+  // Base layer, shown in map as grey
+  routeShapeLayer_base  = L.geoJSON(routeShape, {
       style: function(e) { return { weight: 2, opacity: 0.5, color:  "#a9a9a9" } }
   }).addTo(map.map);
-
-  // Highlight layer, default as NULL
-  // This will be shown upon hovering on the transparent layer
-  highlightLayer = L.geoJSON(null, {
-    style: function(e) { return { weight: 16, opacity: 0.5, color: 'yellow' } } // Adjust the highlighted style
-  }).addTo(map.map);
-
-  // Highlight layer for the clicked route
-  // Only shown upon hovering on the legend
-  highlightShape = L.geoJSON(null, {
-    style: function(e) { return { weight: 16, opacity: 0.6, color: 'orange' } } // Adjust the highlighted style
-  }).addTo(map.map);
   
-  // add transparent layer to map, this will not be shown, but only serves as a layer that will be used for hover functionality
+  // Transparent layer, only serves as a layer that will be used for hover functionality
   routeShapeLayer_transparent  = L.geoJSON(routeShape, {
     style: function(e) { return { weight: 18, opacity: 0} }
   }).addTo(map.map);
@@ -172,80 +148,115 @@ t_routeShape.then(data => {
   // Add click event to the transparent layer
   routeShapeLayer_transparent.on('click', function (e) {
     const route_id = e.layer.feature.properties.route_id;
-    if (currentHighlightedRouteId != null && currentHighlightedRouteId != route_id) {
-      resetClick(currentHighlightedRouteId);
-      currentHighlightedRouteId = null;
-    }
     highlightRouteClick(route_id);
-    addStopstoClickedLayer();
+    if (stops_checkbox.checked) {
+      addStopstoClickedLayer();
+    }
   });
+
+  // Highlighted route layer, default as NULL
+  // This will be shown upon hovering on the transparent layer (routeShapeLayer_transparent)
+  highlightRoute = L.geoJSON(null, {
+    style: function(e) { return { weight: 16, opacity: 0.5, color: 'yellow' } } // Adjust the highlighted style
+  }).addTo(map.map);
+
+  // Highlight shape layer for the clicked route
+  // Only shown upon hovering on the shape item in the legend
+  highlightShape = L.geoJSON(null, {
+    style: function(e) { return { weight: 16, opacity: 0.6, color: 'orange' } } // Adjust the highlighted style
+  }).addTo(map.map);
+
 });
 
 
+/* -------- HOVER EVENT -------- */
 
-function bringShapetoFront(shape_id) {
-  routeShapeLayer.eachLayer(function (layer) {
-    if (layer.feature.properties.shape_id === shape_id) {
-      layer.bringToFront();
-   
-      let decorator_shape = decoratorsMap.get(shape_id);
-
-      // Check if the decorator is currently on the map
-      const isDecoratorShown = map.map.hasLayer(decorator_shape.start) && map.map.hasLayer(decorator_shape.end);
-
-      // If it's shown, remove it; otherwise, add it to the map
-      if (isDecoratorShown) {
-        map.map.removeLayer(decorator_shape.start);
-        map.map.removeLayer(decorator_shape.end);
-      } else {
-        decoratorsMap.forEach(function(value, key) {
-          if (key !== shape_id) {
-            map.map.removeLayer(value.start);
-            map.map.removeLayer(value.end);
-          } else {
-            decorator_shape.start.addTo(map.map);
-            decorator_shape.end.addTo(map.map);
-          }
-        });
-      }
-      
-    
-  }});
-  routeStopLayer.bringToFront();
-}
-
-function highlightShapeHover(shape_id) {
-  highlightedFeatures = routeShape.features.filter(feature => feature.properties.shape_id === shape_id);
-  highlightShape.clearLayers();
-  highlightShape.addData({ type: 'FeatureCollection', features: highlightedFeatures });
-  highlightShape.bringToBack();
-}
+/**
+ * Highlight route on hover.
+ * Updates the map to highlight a route and displays relevant information when hovered over.
+ */
 
 let highlightedFeatures;
 let route_matched;
 function highlightRouteHover(route_id) {
+  // Filter features based on the provided route_id
   highlightedFeatures = routeShape.features.filter(feature => feature.properties.route_id === route_id);
-  highlightLayer.clearLayers();
-  highlightLayer.addData({ type: 'FeatureCollection', features: highlightedFeatures });
-  highlightLayer.bringToBack();
 
+  // Clear existing layers and add new data
+  highlightRoute.clearLayers();
+  highlightRoute.addData({ type: 'FeatureCollection', features: highlightedFeatures });
+  highlightRoute.bringToBack();
+
+  // Find the matching route in the routes data (this will get us the route long name and such)
   route_matched = routes.filter(item => item.route_id === route_id);
 
+  // Update the information displayed in the text-description element
   document.getElementById('text-description').innerHTML = `<p> <strong>${highlightedFeatures[0].properties.agency_name}<strong></p>`;
   document.getElementById('text-description').innerHTML += `<span id="route-name">${highlightedFeatures[0].properties.route_short_name}</span> <label>${route_matched[0].route_long_name}</label>`;
   document.getElementById('text-description').innerHTML += `<p>This route takes <strong>${highlightedFeatures.length}</strong> different shapes.</p>`;
 }
 
-let decoratorsMap = new Map();
+/**
+ * Reset style for hovered route, clear the information when hovering over a shape is ended.
+ */
+function resetHover() {
+  document.getElementById('text-description').innerHTML = 
+      `<p style="font-size:120%"> <strong>Select routes</strong></p>
+      <p> Use your cursor to highlight routes and see their names here. Click for more details. </p>`;
+  highlightRoute.clearLayers();
+  highlightShape.clearLayers();
+}
+
+/* -------- CLICKED EVENT -------- */
+
+/**
+ * This function will be triggered when routeShape layer is clicked
+ * as the result, the stops geometry will be displayed for that clicked route
+ */
+function addStopstoClickedLayer() {
+  const routeStopFeatures = routeStop.features.filter(feature =>
+      feature.properties.route_id === currentHighlightedRouteId 
+  );
+
+  routeStopLayer.clearLayers();
+  routeStopLayer.addData({ type: 'FeatureCollection', features: routeStopFeatures });
+}
+
+// Add an event listener to the stops_checkbox element
+stops_checkbox = document.querySelector('.check');
+stops_checkbox.checked = true;
+stops_checkbox.addEventListener('change', function () {
+  toggleRouteStopLayer(stops_checkbox.checked);
+});
+
+/** 
+ * This function will allow user to show or hide the stops to their preferences
+ * when they click on the stop_checkbox option
+*/ 
+function toggleRouteStopLayer(showStops) {  
+  // let showStops = stops_checkbox.checked;
+  // Toggle the visibility of the routeStopLayer
+  if (showStops) {
+    addStopstoClickedLayer();
+  } else {
+    routeStopLayer.clearLayers();
+  }
+}
+
+/**
+ * Highlight route on click, displays a legend with information, and stores the data of markers for start and end points of each shape.
+ */
+let startEndMarkers = new Map();
 let startMarker = null;
 let endMarker = null;
-let markerHtmlStyles;
 function highlightRouteClick(route_id) {
-  // Reset the style of the previously highlighted route
-  if (currentHighlightedRouteId) {
+  // Reset the previous highlighted route if any
+  if (currentHighlightedRouteId != null && currentHighlightedRouteId != route_id) {
     resetClick(currentHighlightedRouteId);
+    currentHighlightedRouteId = null;
   }
 
+  // Construct legend HTML with route information
   let legendHTML = `<p style="margin-top:0"><strong>${highlightedFeatures[0].properties.agency_name}</strong></p>`;
   legendHTML += `<span id="route-name">${highlightedFeatures[0].properties.route_short_name}</span> <label>${route_matched[0].route_long_name}</label><br><br>`;
   legendHTML += `<div class="grid-container"><div class="item1">
@@ -273,7 +284,9 @@ function highlightRouteClick(route_id) {
 
   let shape_ids = [];
   let i = 0;
-  highlightLayer.eachLayer(function (layer) {
+
+  // Iterate through layers to construct legend items
+  highlightRoute.eachLayer(function (layer) {
     const feature = layer.feature;
     shape_ids.push(feature.properties.shape_id);
     legendHTML  += `<li onclick="bringShapetoFront(${feature.properties.shape_id})" onmouseover="highlightShapeHover(${feature.properties.shape_id})" onmouseout="resetHover()">
@@ -284,23 +297,24 @@ function highlightRouteClick(route_id) {
   });
   legendHTML  += `</ul>`;
 
-  document.getElementsByClassName('legend')[0].style.display = 'block';
-  document.getElementsByClassName('legend')[0].innerHTML = legendHTML;
+  // Display the legend and update map styles
+  document.querySelector('.legend').style.display = 'block';
+  document.querySelector('.legend').innerHTML = legendHTML;
 
-  routeShapeLayer.eachLayer(function (layer) {
+  // Update routeShapeLayer_base styles based for the clicked route
+  routeShapeLayer_base.eachLayer(function (layer) {
     if (layer.feature.properties.route_id === route_id) {
       let shape_id = layer.feature.properties.shape_id;
-      let color_style = getColorBasedOnTripsCount(shape_id, shape_ids);
+      let color_style = getColorForEachShape(shape_id, shape_ids);
       layer.setStyle({ weight: 5, opacity: 1, color: color_style }); // Adjust the style as needed
       layer.bringToFront();
 
+      // Get coordinates for start and end points
       let coordinates = layer.feature.geometry.coordinates;
       let startLatLng = L.latLng(coordinates[0][1], coordinates[0][0])	;
       let endLatLng = L.latLng(coordinates[coordinates.length - 1][1], coordinates[coordinates.length - 1][0]);
-
-      startMarker = L.circleMarker(startLatLng, {radius: 9, weight: 3, color: color_style, fillOpacity: 1, fillColor: 'white'});
-
-      markerHtmlStyles = `
+    
+      let endMarkerStyles = `
           background: none;
           color: #FFFFFF;
           -webkit-text-stroke-width: 3px;
@@ -315,41 +329,78 @@ function highlightRouteClick(route_id) {
         labelAnchor: [0,0],
         iconSize: [0,0],
         tooltipAnchor: [0,0],
-        html: `<i class="fa-solid fa-location-dot" style="${markerHtmlStyles}"></i>`
-      })
+        html: `<i class="fa-solid fa-location-dot" style="${endMarkerStyles}"></i>`
+      });
 
+      startMarker = L.circleMarker(startLatLng, {radius: 9, weight: 3, color: color_style, fillOpacity: 1, fillColor: 'white'});
       endMarker = L.marker(endLatLng, {icon: icon});
 
-      // Store markers in the decoratorsMap with shape_id as key
-      decoratorsMap.set(shape_id, { start: startMarker, end: endMarker });
+      // Store markers in the startEndMarkers with shape_id as key
+      startEndMarkers.set(shape_id, { start: startMarker, end: endMarker });
     }
   });
-  
-  checkbox.checked = true;
-  currentHighlightedRouteId = route_id; // Update the currently highlighted route ID
+
+  // Update the currently highlighted route ID
+  currentHighlightedRouteId = route_id; 
 }
 
-
-function resetHover() {
-  document.getElementById('text-description').innerHTML = 
-      `<p style="font-size:120%"> <strong>Select routes</strong></p>
-      <p> Use your cursor to highlight routes and see their names here. Click for more details. </p>`;
-  highlightLayer.clearLayers();
+/**
+ * Highlight shape (of clicked route) on hover.
+ */
+function highlightShapeHover(shape_id) {
+  highlightedFeatures = routeShape.features.filter(feature => feature.properties.shape_id === shape_id);
   highlightShape.clearLayers();
+  highlightShape.addData({ type: 'FeatureCollection', features: highlightedFeatures });
+  highlightShape.bringToBack();
 }
 
+/**
+ * Bring shape (of the clicked route) to front and toggle markers (start/end markers).
+ */
+function bringShapetoFront(shape_id) {
+  routeShapeLayer_base.eachLayer(function (layer) {
+    if (layer.feature.properties.shape_id === shape_id) {
+      layer.bringToFront();
+   
+      let markers_shape = startEndMarkers.get(shape_id);
 
+      // Check if the decorator is currently on the map
+      const isMarkersShown = map.map.hasLayer(markers_shape.start) && map.map.hasLayer(markers_shape.end);
+
+      // If it's shown, remove it; otherwise, add it to the map
+      if (isMarkersShown) {
+        map.map.removeLayer(markers_shape.start);
+        map.map.removeLayer(markers_shape.end);
+      } else {
+        startEndMarkers.forEach(function(value, key) {
+          if (key !== shape_id) {
+            map.map.removeLayer(value.start);
+            map.map.removeLayer(value.end);
+          } else {
+            markers_shape.start.addTo(map.map);
+            markers_shape.end.addTo(map.map);
+          }
+        });
+      }  
+    }
+  });
+  routeStopLayer.bringToFront();
+}
+
+/**
+ * Reset the style for clicked route and clear the legend, as well as decorator
+ */
 function resetClick(route_id) {  
-  routeShapeLayer.eachLayer(function (layer) {
+  routeShapeLayer_base.eachLayer(function (layer) {
     if (layer.feature.properties.route_id === route_id) {
-      routeShapeLayer.resetStyle(layer);
+      routeShapeLayer_base.resetStyle(layer);
 
       let shape_id = layer.feature.properties.shape_id;
-      let decorator_shape = decoratorsMap.get(shape_id);
+      let markers_shape = startEndMarkers.get(shape_id);
 
-      if (decorator_shape) {
-        decorator_shape.start.remove();
-        decorator_shape.end.remove();
+      if (markers_shape) {
+        markers_shape.start.remove();
+        markers_shape.end.remove();
       }
     }
   });
@@ -357,74 +408,19 @@ function resetClick(route_id) {
   routeStopLayer.clearLayers();
   currentHighlightedRouteId = null;
 
-  document.getElementsByClassName('legend')[0].innerHTML = "";
-  document.getElementsByClassName('legend')[0].style.display = 'none';
+  // Clear the legend display
+  document.querySelector('.legend').innerHTML = "";
+  document.querySelector('.legend').innerHTML = 'none';
 
-  checkbox.checked = false;
-
-  // Clear the decoratorsMap
-  decoratorsMap.clear();
-
+  // Clear the startEndMarkers
+  startEndMarkers.clear();
 }
 
-
-
-// function highlightRoutesAtPoint(latlng) {
-//   const circle = L.circle(latlng);
-  
-//   const intersectingFeatures = [];
-
-//   routeShapeLayer_transparent.eachLayer(function (layer) {
-//     const feature = layer.feature;
-    
-//     if (turf.booleanIntersects(feature.geometry, turf.buffer(turf.point(circle.toGeoJSON().geometry.coordinates), 0.08, {unit: 'kilometers'}))) {
-//       intersectingFeatures.push(feature);
-//     }
-//   })
-
-//   // console.log(intersectingFeatures);
-
-//   highlightLayer.clearLayers();
-//   highlightLayer.addData({ type: 'FeatureCollection', features: intersectingFeatures });
-
-//   highlightLayer.bringToBack();
-
-//   // Create a map to store distinct route short names for each agency
-//   const agencyRouteMap = new Map();
-
-//   // Populate the map with distinct route short names for each agency
-//   intersectingFeatures.forEach(feature => {
-//     const agencyName = feature.properties.agency_name;
-//     const routeShortName = feature.properties.route_short_name;
-
-//     if (!agencyRouteMap.has(agencyName)) {
-//       agencyRouteMap.set(agencyName, new Set());
-//     }
-
-//     agencyRouteMap.get(agencyName).add(routeShortName);
-//   });
-
-//   // Display information
-//   document.getElementById('text-description').innerHTML = '';
-
-//   console.log(agencyRouteMap.keys)
-
-//   agencyRouteMap.forEach((routeShortNames, agencyName) => {
-//     document.getElementById('text-description').innerHTML += `<p><strong>${agencyName}</strong></p>`;
-    
-//     const numRouteShortNames = routeShortNames.size;
-
-//     if (numRouteShortNames >= 5 ) {
-//       document.getElementById('text-description').innerHTML += `<p>${numRouteShortNames} routes</p>`;
-//     }
-//     else {
-//       document.getElementById('text-description').innerHTML += `<p>${[...routeShortNames].join('<br>')}</p>`;
-//     }
-//   });  
-
-// }
-
-
+/* -------- TABS FUNCTIONS -------- */
+/**
+ * Activate the specified tab and update its visual representation.
+ * @param {number} n - The index of the tab to activate.
+ */
 
 function activate_tab(n) {
   // Get the total number of tabs
@@ -432,18 +428,19 @@ function activate_tab(n) {
 
   // Iterate through all tabs
   for (var i = 1; i <= totalTabs; i++) {
-    // Check if the current tab is the one to keep (n), show it, otherwise hide it
-    if (i == n) {
-      document.getElementById("tab-" + i).style.display = "block";
-      document.getElementsByClassName("tab-" + i)[0].className = `tab-${i} active`;
-    } else {
-      document.getElementById("tab-" + i).style.display = "none";
-      document.getElementsByClassName("tab-" + i)[0].className = `tab-${i}`;
-    }
+    const tabId = `tab-${i}`;
+    const tabElement = document.getElementById(tabId);
+    const tabClass = `tab-${i}`;
+
+    tabElement.style.display = i === n ? "block" : "none";
+    document.getElementsByClassName(tabClass)[0].className = i === n ? `${tabClass} active` : tabClass;
   }
 }
 
-
+/**
+ * Focus on the form container and display the dropdown list.
+ * Add an event listener to remove the focus when clicking outside the form container.
+ */
 function focusFormContainer() {
   // Get the form container element
   const formContainer = document.querySelector('.form-container');
@@ -459,7 +456,9 @@ function focusFormContainer() {
   });
 }
 
-
+/**
+ * Search for items based on the input value and display matching results.
+ */
 function search_function() {
     let input = document.getElementById('searchbar').value.toLowerCase();
 
@@ -473,6 +472,9 @@ function search_function() {
     }
 }
 
+/**
+ * Clear the previous search results.
+ */
 function clearResults() {
     // Assuming you have an element with the id "results" to display the matching items
     let resultsElement = document.getElementById('results');
@@ -481,6 +483,10 @@ function clearResults() {
     resultsElement.innerHTML = '';
 }
 
+/**
+ * Display matching items in the results list.
+ * @param {Array} matchingItems - The array of matching items to display.
+ */
 function displayMatchingItems(matchingItems) {
   let resultsElement = document.getElementById('results');
 
