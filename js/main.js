@@ -570,6 +570,9 @@ function displayMatchingItems(matchingItems) {
       // Add a click event listener to each list item
       listItem.addEventListener('click', function () {
           highlightRouteClick(item.route_id);
+          if (stops_checkbox.checked) {
+            addStopstoClickedLayer();
+          }
           document.getElementsByClassName("dropdown-list")[0].style.display = "none"; // hide the drop-down content if one element is clicked
       });
 
