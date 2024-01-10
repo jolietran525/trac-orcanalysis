@@ -1,5 +1,23 @@
 // Load map from the leaflet_map.js class
-const map = new LeafletMap();
+const Lmap = new LeafletMap();
+
+L.Control.Button = L.Control.extend({
+  options: {
+    position: 'topright',
+  },
+  onAdd: function (map) {
+    var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control buttons');
+    var button = L.DomUtil.create('a', 'leaflet-control-button', container);
+    L.DomEvent.disableClickPropagation(button);
+    button.innerHTML = '<i class="fa-solid fa-rotate-right" id="refresh_button"></i>';
+
+    return container;
+  },
+  onRemove: function (map) {},
+});
+
+var control = new L.Control.Button();
+control.addTo(Lmap.map);
 
 /* ---------------------- GLOBAL VARIABLES / FUNCTIONS ---------------------- */
 // https://sashamaps.net/docs/resources/20-colors/
@@ -109,7 +127,7 @@ t_routeStop.then(data => {
       // Add a tooltip to each stop layer displaying the Stop ID
       layer.bindTooltip(`<strong>Stop ID:</strong> ${feature.properties.stop_id}`)
     }
-  }).addTo(map.map);
+  }).addTo(Lmap.map);
   
 });
 
@@ -123,12 +141,12 @@ t_routeShape.then(data => {
   // Base layer, shown in map as grey
   routeShapeLayer_base  = L.geoJSON(routeShape, {
       style: function(e) { return { weight: 2, opacity: 0.5, color:  "#a9a9a9" } }
-  }).addTo(map.map);
+  }).addTo(Lmap.map);
   
   // Transparent layer, only serves as a layer that will be used for hover functionality
   routeShapeLayer_transparent  = L.geoJSON(routeShape, {
     style: function(e) { return { weight: 18, opacity: 0} }
-  }).addTo(map.map);
+  }).addTo(Lmap.map);
 
   // Add hover events to the transparent layer
   routeShapeLayer_transparent.on('mouseover', function (e) {
@@ -153,13 +171,13 @@ t_routeShape.then(data => {
   // This will be shown upon hovering on the transparent layer (routeShapeLayer_transparent)
   highlightRoute = L.geoJSON(null, {
     style: function(e) { return { weight: 16, opacity: 0.65, color: 'yellow' } } // Adjust the highlighted style
-  }).addTo(map.map);
+  }).addTo(Lmap.map);
 
   // Highlight shape layer for the clicked route
   // Only shown upon hovering on the shape item in the legend
   highlightShape = L.geoJSON(null, {
     style: function(e) { return { weight: 16, opacity: 0.65, color: 'orange' } } // Adjust the highlighted style
-  }).addTo(map.map);
+  }).addTo(Lmap.map);
 
 });
 
@@ -250,11 +268,16 @@ function highlightRouteClick(route_id) {
     currentHighlightedRouteId = null;
   }
 
-  // Construct legend HTML with route information
+  // Construct legend HTML with route information:
+  // Agency Name
   let legendHTML = `<p style="margin-top:0"><strong>${highlightedFeatures[0].properties.agency_name}</strong></p>`;
+  // Route Short Name + Route Long Name
   legendHTML += `<span id="route-name">${highlightedFeatures[0].properties.route_short_name}</span> <label>${route_matched[0].route_long_name}</label><br><br>`;
-  legendHTML += `<div class="grid-container"><div class="item1">
-                    <span style="background-color: #FFFFFF;
+  // Start/End point markers
+  legendHTML += `<div class="grid-container">
+                  <div>
+                    <span style=
+                       "background-color: #FFFFFF;
                         width: 1rem;
                         height: 1rem;
                         display: inline-block;
@@ -263,17 +286,25 @@ function highlightRouteClick(route_id) {
                         vertical-align: text-bottom;
                         margin-right: 10px;">
                     </span>
-                    <label>Start</label></div>`;
-  legendHTML += `<div class="item2"><i class="fa-solid fa-location-dot"
-                    style="
-                        background: none;
-                        color: #FFFFFF;
-                        -webkit-text-stroke-width: 2.5px;
-                        -webkit-text-stroke-color: #000000;
-                        font-size: 1.25rem;
-                        vertical-align: text-bottom;
-                        margin-right: 10px;"></i> <label>End</label></div></div>`;
+                    <label>Start</label>
+                  </div>
+                  <div>
+                    <i class="fa-solid fa-location-dot"
+                      style=
+                         "background: none;
+                          color: #FFFFFF;
+                          -webkit-text-stroke-width: 2.5px;
+                          -webkit-text-stroke-color: #000000;
+                          font-size: 1.25rem;
+                          vertical-align: text-bottom;
+                          margin-right: 10px;">
+                    </i>
+                    <label>End</label>
+                  </div>
+                </div>`;
+  // Extra info
   legendHTML += `<p style="font-size: small;"><em>Click on the shape to show/hide<br>the start and end point</em></p>`;
+  // List of shape info
   legendHTML += `<ul style="margin-top:10px;">`;
 
   let shape_ids = [];
@@ -283,9 +314,11 @@ function highlightRouteClick(route_id) {
   highlightRoute.eachLayer(function (layer) {
     const feature = layer.feature;
     shape_ids.push(feature.properties.shape_id);
-    legendHTML  += `<li onclick="bringShapetoFront(${feature.properties.shape_id})" onmouseover="highlightShapeHover(${feature.properties.shape_id})" onmouseout="resetHover()">
-                      <span class="legend-color" style="background-color: ${colors[i]}" ></span>
-                      <label><strong>${feature.properties.trips_count}</strong> trips made</label>
+    legendHTML  += `<li onclick="bringShapetoFront(${feature.properties.shape_id})"
+                        onmouseover="highlightShapeHover(${feature.properties.shape_id})"
+                        onmouseout="resetHover()">
+                            <span class="legend-color" style="background-color: ${colors[i]}" ></span>
+                            <label><strong>${feature.properties.trips_count}</strong> trips/week</label>
                     </li>`;
     i++;
   });
@@ -359,20 +392,20 @@ function bringShapetoFront(shape_id) {
       let markers_shape = startEndMarkers.get(shape_id);
 
       // Check if the decorator is currently on the map
-      const isMarkersShown = map.map.hasLayer(markers_shape.start) && map.map.hasLayer(markers_shape.end);
+      const isMarkersShown = Lmap.map.hasLayer(markers_shape.start) && Lmap.map.hasLayer(markers_shape.end);
 
       // If it's shown, remove it; otherwise, add it to the map
       if (isMarkersShown) {
-        map.map.removeLayer(markers_shape.start);
-        map.map.removeLayer(markers_shape.end);
+        Lmap.map.removeLayer(markers_shape.start);
+        Lmap.map.removeLayer(markers_shape.end);
       } else {
         startEndMarkers.forEach(function(value, key) {
           if (key !== shape_id) {
-            map.map.removeLayer(value.start);
-            map.map.removeLayer(value.end);
+            Lmap.map.removeLayer(value.start);
+            Lmap.map.removeLayer(value.end);
           } else {
-            markers_shape.start.addTo(map.map);
-            markers_shape.end.addTo(map.map);
+            markers_shape.start.addTo(Lmap.map);
+            markers_shape.end.addTo(Lmap.map);
           }
         });
       }  
@@ -417,18 +450,51 @@ function resetClick(route_id) {
  */
 
 function activate_tab(n) {
-  // Get the total number of tabs
-  var totalTabs = 3 /* Set the total number of tabs */;
+  // Check the screen height
+  var screenHeight = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+  var totalTabs = 3; // Set the total number of tabs
+  if (screenHeight > 600) {
+    // Use the initial logic for screen heights greater than 600px
+    
 
-  // Iterate through all tabs
-  for (var i = 1; i <= totalTabs; i++) {
-    const tabId = `tab-${i}`;
-    const tabElement = document.getElementById(tabId);
-    const tabClass = `tab-${i}`;
+    for (var i = 1; i <= totalTabs; i++) {
+      const tabId = `tab-${i}`;
+      const tabElement = document.getElementById(tabId);
+      const tabClass = `tab-${i}`;
 
-    tabElement.style.display = i === n ? "block" : "none";
-    document.getElementsByClassName(tabClass)[0].className = i === n ? `${tabClass} active` : tabClass;
+      tabElement.style.display = i === n ? "block" : "none";
+      document.getElementsByClassName(tabClass)[0].className = i === n ? `${tabClass} active` : tabClass;
+    }
+  } else {
+    // Toggle the display of the tab content for screen heights less than or equal to 600px
+    var tabContent = document.querySelector('.map-panel-tabs .tab-content');
+
+    for (var i = 1; i <= totalTabs; i++) {
+      const tabId = `tab-${i}`;
+      const tabElement = document.getElementById(tabId);
+      const tabClass = `tab-${i}`;
+
+      if (i === n) {
+        // If tabElement is currently displayed and i equals n, hide it and remove "active" class
+        if (tabElement.style.display === 'block') {
+          tabContent.style.display = 'none';
+          tabElement.style.display = 'none';
+          document.getElementsByClassName(tabClass)[0].classList.remove('active');
+        } else {
+          // If tabElement is not currently displayed, show it and add "active" class
+          tabContent.style.display = 'block';
+          tabElement.style.display = 'block';
+          document.getElementsByClassName(tabClass)[0].className = `${tabClass} active`;
+        }
+      } else {
+        // For other tabs, set display and class accordingly
+        tabElement.style.display = 'none';
+        document.getElementsByClassName(tabClass)[0].className = tabClass;
+      }
+    }
+
   }
+  
 }
 
 /**
