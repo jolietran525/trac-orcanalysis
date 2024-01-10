@@ -176,21 +176,16 @@ td:first-child {font-weight: bold;}
   color: #fff; /* Change the text color for the active tab */
 }
 
+.buttons {
+  cursor: pointer;
+}
 
 .buttons i {
-  -webkit-text-stroke-width: 0.8px;
+  -webkit-text-stroke-width: 0.5px;
   font-size: 1rem;
   text-align: center;
   vertical-align: middle;
   margin:auto;
-}
-
-.buttons i:hover {
-  color: #f58231;
-}
-
-.buttons i:active {
-  color: #e6194B;
 }
 
 .tab-item {
