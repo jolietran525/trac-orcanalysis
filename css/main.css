@@ -9,6 +9,7 @@ header {
 body, p, ol, ul, td, label {
   font: 1em/1.5em sans-serif;
   font-size: 15px;
+  user-select: none;
 }
 
 /* https://web.dev/one-line-layouts/ */
@@ -78,7 +79,8 @@ td:first-child {font-weight: bold;}
 
 .legend {
   background-color: rgba(255, 255, 255, 1);
-  border: 1px solid #ccc;
+  border: 2px solid rgba(0,0,0,0.2);
+  border-radius: 4px;
   padding: 20px 15px 10px 15px;
   max-width: 225px;
   max-height: 50vh;
@@ -106,15 +108,17 @@ td:first-child {font-weight: bold;}
   padding: 0;
 }
 
+
 .legend li:hover {
   background-color: #e8e8e8;
+  cursor: pointer;
 }
 
 .legend-color {
   width: 25px;
   height: 10px;
   display: inline-block;
-  border: 0.3px solid rgba(61, 61, 61, 0.5) ;
+  border: 2px solid rgba(0,0,0,0.2);
   margin-right: 5px;
 }
 
@@ -123,9 +127,9 @@ td:first-child {font-weight: bold;}
   top: 10px; /* Adjust the top position as needed */
   left: 10px; /* Adjust the left position as needed */
   flex-direction: column;
-  width: fit-content;
+  width: max-content;
   z-index: 3;
-  height: fit-content;
+  height: max-content;
   max-height: 50vh;
 }
 
@@ -136,16 +140,17 @@ td:first-child {font-weight: bold;}
 
 .tab-content {
   background: rgb(255, 255, 255);
-  border-radius: 5px; 
-  border: 1px solid rgb(61, 61, 61, 0.3);
+  border-radius: 4px; 
+  border: 2px solid rgba(0,0,0,0.2);
   width: 450px;
 }
 
 .tab-1, .tab-2, .tab-3 {
-  border: 1px solid rgb(61, 61, 61, 0.3);
-  border-top-left-radius: 5px; 
-  border-top-right-radius: 5px; 
+  border: 2px solid rgba(0,0,0,0.2);
+  border-top-left-radius: 4px; 
+  border-top-right-radius: 4px; 
   background: rgba(255, 255, 255, 1);
+  font-weight: 600;
   display: inline-block;
   padding: 10px 15px 10px 15px;
   width: fit-content;
@@ -153,11 +158,11 @@ td:first-child {font-weight: bold;}
 }
 
 .tab-1:hover, .tab-2:hover, .tab-3:hover {
-  background-color: #c4f4ff;
+  color: #469990;
 }
 
 .tab-1.active, .tab-2.active, .tab-3.active {
-  background: #3498db; /* Change the background color for the active tab */
+  background:#469990; /* Change the background color for the active tab */
   color: #fff; /* Change the text color for the active tab */
 }
 
@@ -170,15 +175,18 @@ td:first-child {font-weight: bold;}
   z-index: 3;
 }
 
-.buttons a {
-  color: #000075;
+.buttons i {
+  color: #469990;
+  -webkit-text-stroke-width: 0.8px;
+  font-size: 1.2rem;
+  cursor: pointer;
 }
 
-.buttons a:hover {
-  color: #911eb4;
+.buttons i:hover {
+  color: #f58231;
 }
 
-.buttons a:active {
+.buttons i:active {
   color: #e6194B;
 }
 
@@ -196,13 +204,14 @@ td:first-child {font-weight: bold;}
   display: block;
   background: transparent;
   border: 1px solid rgba(61, 61, 61, 0.3);
+  border-radius: 4px;
   z-index: 62;
   padding: 10px;
   box-sizing: border-box;
 }
 
 #searchbar:focus {
-  border: 2px solid #3498db; /* Change the border color when focused */
+  border: 2px solid #469990; /* Change the border color when focused */
   outline: none; /* Remove the default focus outline */
 }
 
@@ -246,7 +255,7 @@ input:-webkit-autofill:active{
 }
 
 #route-name {
-  border: 2px solid #3498db;
+  border: 2px solid #469990;
   padding: 5px;
   font-size: 15px;
   border-radius: 5px;

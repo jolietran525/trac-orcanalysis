@@ -4,24 +4,19 @@ const map = new LeafletMap();
 /* ---------------------- GLOBAL VARIABLES / FUNCTIONS ---------------------- */
 // https://sashamaps.net/docs/resources/20-colors/
 // Global array that stores a list of color
-let colors = ['#e6194b',
+let colors = ['#e6194B',
               '#3cb44b', 
               '#4363d8', 
               '#f58231', 
-              '#911eb4', 
-              '#46f0f0', 
               '#f032e6', 
-              '#bcf60c', 
-              '#fabebe', 
-              '#008080', 
-              '#e6beff', 
-              '#9a6324', 
-              '#fffac8', 
+              '#fabed4', 
+              '#469990', 
               '#800000', 
-              '#aaffc3', 
-              '#808000', 
-              '#ffd8b1', 
-              '#000075'];
+              '#9A6324',
+              '#dcbeff', 
+              '#42d4f4',
+              '#000075',
+              '#aaffc3', ];
 
 // Global variable that stores the stops_checkbox in the Options tab in HTML doc
 let stops_checkbox;
@@ -157,13 +152,13 @@ t_routeShape.then(data => {
   // Highlighted route layer, default as NULL
   // This will be shown upon hovering on the transparent layer (routeShapeLayer_transparent)
   highlightRoute = L.geoJSON(null, {
-    style: function(e) { return { weight: 16, opacity: 0.5, color: 'yellow' } } // Adjust the highlighted style
+    style: function(e) { return { weight: 16, opacity: 0.65, color: 'yellow' } } // Adjust the highlighted style
   }).addTo(map.map);
 
   // Highlight shape layer for the clicked route
   // Only shown upon hovering on the shape item in the legend
   highlightShape = L.geoJSON(null, {
-    style: function(e) { return { weight: 16, opacity: 0.6, color: 'orange' } } // Adjust the highlighted style
+    style: function(e) { return { weight: 16, opacity: 0.65, color: 'orange' } } // Adjust the highlighted style
   }).addTo(map.map);
 
 });
@@ -224,7 +219,6 @@ function addStopstoClickedLayer() {
 
 // Add an event listener to the stops_checkbox element
 stops_checkbox = document.querySelector('.check');
-stops_checkbox.checked = true;
 stops_checkbox.addEventListener('change', function () {
   toggleRouteStopLayer(stops_checkbox.checked);
 });
@@ -306,7 +300,7 @@ function highlightRouteClick(route_id) {
     if (layer.feature.properties.route_id === route_id) {
       let shape_id = layer.feature.properties.shape_id;
       let color_style = getColorForEachShape(shape_id, shape_ids);
-      layer.setStyle({ weight: 5, opacity: 1, color: color_style }); // Adjust the style as needed
+      layer.setStyle({ weight: 6, opacity: 1, color: color_style }); // Adjust the style as needed
       layer.bringToFront();
 
       // Get coordinates for start and end points
@@ -410,7 +404,7 @@ function resetClick(route_id) {
 
   // Clear the legend display
   document.querySelector('.legend').innerHTML = "";
-  document.querySelector('.legend').innerHTML = 'none';
+  document.querySelector('.legend').style.display = 'none';
 
   // Clear the startEndMarkers
   startEndMarkers.clear();
@@ -510,8 +504,8 @@ function displayMatchingItems(matchingItems) {
       // Add a click event listener to each list item
       listItem.addEventListener('click', function () {
           highlightRouteClick(item.route_id);
-          addStopstoClickedLayer();
           document.getElementsByClassName("dropdown-list")[0].style.display = "none"; // hide the drop-down content if one element is clicked
       });
+
   });
 }
