@@ -452,8 +452,9 @@ function resetClick(route_id) {
 function activate_tab(n) {
   // Check the screen height
   var screenHeight = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+  var screenWidth = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
   var totalTabs = 3; // Set the total number of tabs
-  if (screenHeight > 600) {
+  if (screenHeight > 600 && screenWidth > 800) {
     // Use the initial logic for screen heights greater than 600px
     
 

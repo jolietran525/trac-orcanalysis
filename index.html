@@ -76,7 +76,7 @@
               <i class="fa-solid fa-rotate-right" id="refresh_button"></i>
             </div> -->
             
-            <div class="tab-item" id="tab-1" tabindex="0" id="routes" style="display: block;">
+            <div class="tab-item" id="tab-1" tabindex="0" id="routes" style="display: flex;">
               <div class="form">
                 <div id="text-description" style="margin:0">
                   <p style="font-size:120%"> <strong>Select routes</strong> </p>
@@ -86,15 +86,16 @@
             </div>
 
             <div class="tab-item" id="tab-2" tabindex="-1" id="departures" style="display: none;">
-              <div class="form-container"   onclick="focusFormContainer()">
-                <div class="form">
+              <div class="form"   onclick="focusFormContainer()">
+                <div class="form-container" onclick="focusFormContainer()">
                   <p style="font-size:120%"> <strong>Search routes</strong> </p>
                   <input id="searchbar" onkeyup="search_function()" placeholder="Search routes..." aria-autocomplete="list" class="input" type="text" autocomplete="off">
                 </div>
+                <div class="dropdown-content" style="padding-bottom: 10px;">
+                  <ul class="dropdown-list" id="results"></ul>
+                </div>
               </div>
-              <div class="dropdown-content" style="padding-bottom: 10px;">
-                <ul class="dropdown-list" id="results"></ul>
-              </div>
+              
 
             </div>
 
