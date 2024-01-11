@@ -85,7 +85,7 @@ td:first-child {font-weight: bold;}
   padding: 20px 15px 10px 15px;
   min-width: min(150px, 20vw);
   max-width: 200px;
-  min-height: 20vh;
+  min-height: fit-content;
   max-height: 40vh;
   overflow-y: auto;
 }
