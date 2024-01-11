@@ -476,7 +476,6 @@ function resetClick(route_id) {
         const tabElement = document.getElementsByClassName(tabClass)[0];
   
         if (tabElement.classList.contains('active')) {
-          console.log(i);
           previouslyActiveTab = i;
           tabElement.classList.remove('active');
           tabContent.style.display = 'none';
@@ -545,6 +544,24 @@ function resetClick(route_id) {
     }
   }
   
+/**
+ * Focus on the form container and display the dropdown list.
+ * Add an event listener to remove the focus when clicking outside the form container.
+ */
+function focusFormContainer() {
+  // Get the form container element
+  const formContainer = document.querySelector('.form-container');
+  
+  document.getElementsByClassName("dropdown-list")[0].style.display = "block";
+  
+  // Add an event listener to remove the class when clicking outside the form container
+  document.addEventListener('click', function removeFocus(e) {
+    if (!formContainer.contains(e.target)) {
+      document.removeEventListener('click', removeFocus);
+      document.getElementsByClassName("dropdown-list")[0].style.display = "none";
+    }
+  });
+}
 
 /**
  * Search for items based on the input value and display matching results.

@@ -83,8 +83,8 @@ td:first-child {font-weight: bold;}
   border: 2px solid rgba(0,0,0,0.2);
   border-radius: 4px;
   padding: 20px 15px 10px 15px;
-  min-width: min(100px, 20vw);
-  max-width: 150px;
+  min-width: min(150px, 20vw);
+  max-width: 200px;
   min-height: 20vh;
   max-height: 40vh;
   overflow-y: auto;
@@ -160,7 +160,7 @@ td:first-child {font-weight: bold;}
   font-weight: 600;
   display: inline-block;
   padding: 10px 15px 10px 15px;
-  width: 60px;
+  width: 55px;
   text-align: center;
   cursor: pointer;
 }
@@ -179,8 +179,8 @@ td:first-child {font-weight: bold;}
   border-radius: 4px; 
   border: 2px solid rgba(0,0,0,0.2);
   padding:12px;
-  min-width: min(250px, 30vw);
-  max-width: 275px;
+  min-width: min(250px, 25vw);
+  width: max(25vw, 285px);
 }
 
 /* Hide tab content for screens with height less than 600px */
