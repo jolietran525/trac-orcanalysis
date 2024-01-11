@@ -83,8 +83,8 @@ td:first-child {font-weight: bold;}
   border: 2px solid rgba(0,0,0,0.2);
   border-radius: 4px;
   padding: 20px 15px 10px 15px;
-  min-width: min(150px, 20vw);
-  max-width: 200px;
+  min-width: min(225px, 20vw);
+  max-width: 225px;
   min-height: fit-content;
   max-height: 40vh;
   overflow-y: auto;
