@@ -465,6 +465,7 @@ function resetClick(route_id) {
     // Check the screen height and width
     var screenHeight = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
     var screenWidth = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+    var tabContent = document.querySelector('.map-panel-tabs .tab-content');
     var totalTabs = 3; // Set the total number of tabs
   
     // Check if the screen size is small
@@ -478,7 +479,8 @@ function resetClick(route_id) {
           console.log(i);
           previouslyActiveTab = i;
           tabElement.classList.remove('active');
-          activate_tab(previouslyActiveTab);
+          tabContent.style.display = 'none';
+          // document.getElementById(tabId).style.display = 'none';
         }
       }
     } else {
