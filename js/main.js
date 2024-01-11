@@ -303,7 +303,7 @@ function highlightRouteClick(route_id) {
                   </div>
                 </div>`;
   // Extra info
-  legendHTML += `<p style="font-size: small;"><em>Click on the shape to show/hide<br>the start and end point</em></p>`;
+  legendHTML += `<p style="font-size: small;"><em>Click on the shape to show/hide the start and end point</em></p>`;
   // List of shape info
   legendHTML += `<ul style="margin-top:10px;">`;
 
@@ -318,7 +318,7 @@ function highlightRouteClick(route_id) {
                         onmouseover="highlightShapeHover(${feature.properties.shape_id})"
                         onmouseout="resetHover()">
                             <span class="legend-color" style="background-color: ${colors[i]}" ></span>
-                            <label><strong>${feature.properties.trips_count}</strong> trips/week</label>
+                            <label><strong>${feature.properties.trips_count}</strong> trips</label>
                     </li>`;
     i++;
   });
@@ -449,73 +449,100 @@ function resetClick(route_id) {
  * @param {number} n - The index of the tab to activate.
  */
 
-function activate_tab(n) {
-  // Check the screen height
-  var screenHeight = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
-  var screenWidth = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
-  var totalTabs = 3; // Set the total number of tabs
-  if (screenHeight > 600 && screenWidth > 800) {
-    // Use the initial logic for screen heights greater than 600px
-    
+  // Initial check when the page loads
+  window.onload = function() {
+    resize_tab();
+  };
 
-    for (var i = 1; i <= totalTabs; i++) {
-      const tabId = `tab-${i}`;
-      const tabElement = document.getElementById(tabId);
-      const tabClass = `tab-${i}`;
+  // Handle resize events
+  window.onresize = function() {
+    resize_tab();
+  };
 
-      tabElement.style.display = i === n ? "block" : "none";
-      document.getElementsByClassName(tabClass)[0].className = i === n ? `${tabClass} active` : tabClass;
-    }
-  } else {
-    // Toggle the display of the tab content for screen heights less than or equal to 600px
-    var tabContent = document.querySelector('.map-panel-tabs .tab-content');
+  var previouslyActiveTab = null;
 
-    for (var i = 1; i <= totalTabs; i++) {
-      const tabId = `tab-${i}`;
-      const tabElement = document.getElementById(tabId);
-      const tabClass = `tab-${i}`;
-
-      if (i === n) {
-        // If tabElement is currently displayed and i equals n, hide it and remove "active" class
-        if (tabElement.style.display === 'block') {
-          tabContent.style.display = 'none';
-          tabElement.style.display = 'none';
-          document.getElementsByClassName(tabClass)[0].classList.remove('active');
-        } else {
-          // If tabElement is not currently displayed, show it and add "active" class
-          tabContent.style.display = 'block';
-          tabElement.style.display = 'block';
-          document.getElementsByClassName(tabClass)[0].className = `${tabClass} active`;
+  function resize_tab() {
+    // Check the screen height and width
+    var screenHeight = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+    var screenWidth = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+    var totalTabs = 3; // Set the total number of tabs
+  
+    // Check if the screen size is small
+    if (screenHeight <= 600 || screenWidth <= 800) {
+      // Remove 'active' class from active tabs
+      for (var i = 1; i <= totalTabs; i++) {
+        const tabClass = `tab-${i}`;
+        const tabElement = document.getElementsByClassName(tabClass)[0];
+  
+        if (tabElement.classList.contains('active')) {
+          console.log(i);
+          previouslyActiveTab = i;
+          tabElement.classList.remove('active');
+          activate_tab(previouslyActiveTab);
         }
-      } else {
-        // For other tabs, set display and class accordingly
-        tabElement.style.display = 'none';
-        document.getElementsByClassName(tabClass)[0].className = tabClass;
+      }
+    } else {
+      // Restore 'active' class for the previously active tab
+      if (previouslyActiveTab !== null) {
+        const tabClass = `tab-${previouslyActiveTab}`;
+        const tabElement = document.getElementsByClassName(tabClass)[0];
+  
+        if (!tabElement.classList.contains('active')) {
+          tabElement.classList.add('active');
+          activate_tab(previouslyActiveTab);
+        }
       }
     }
-
   }
   
-}
-
-/**
- * Focus on the form container and display the dropdown list.
- * Add an event listener to remove the focus when clicking outside the form container.
- */
-function focusFormContainer() {
-  // Get the form container element
-  const formContainer = document.querySelector('.form-container');
+  function activate_tab(n) {
+    previouslyActiveTab = n;
+    // Check the screen height and width
+    var screenHeight = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+    var screenWidth = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+    var totalTabs = 3; // Set the total number of tabs
+    var tabContent = document.querySelector('.map-panel-tabs .tab-content');
   
-  document.getElementsByClassName("dropdown-list")[0].style.display = "block";
+    if (screenHeight > 600 && screenWidth > 800) {
+      // Use the initial logic for screen heights greater than 600px
+      tabContent.style.display = 'block';
   
-  // Add an event listener to remove the class when clicking outside the form container
-  document.addEventListener('click', function removeFocus(e) {
-    if (!formContainer.contains(e.target)) {
-      document.removeEventListener('click', removeFocus);
-      document.getElementsByClassName("dropdown-list")[0].style.display = "none";
+      for (var i = 1; i <= totalTabs; i++) {
+        const tabId = `tab-${i}`;
+        const tabElement = document.getElementById(tabId);
+        const tabClass = `tab-${i}`;
+  
+        tabElement.style.display = i === n ? "block" : "none";
+        document.getElementsByClassName(tabClass)[0].className = i === n ? `${tabClass} active` : tabClass;
+      }
+    } else {
+      // Toggle the display of the tab content for screen heights less than or equal to 600px
+      for (var i = 1; i <= totalTabs; i++) {
+        const tabId = `tab-${i}`;
+        const tabElement = document.getElementById(tabId);
+        const tabClass = `tab-${i}`;
+  
+        if (i === n) {
+          // If tabElement is currently displayed and i equals n, hide it and remove "active" class
+          if (tabElement.style.display === 'block') {
+            tabContent.style.display = 'none';
+            tabElement.style.display = 'none';
+            document.getElementsByClassName(tabClass)[0].classList.remove('active');
+          } else {
+            // If tabElement is not currently displayed, show it and add "active" class
+            tabContent.style.display = 'block';
+            tabElement.style.display = 'block';
+            document.getElementsByClassName(tabClass)[0].className = `${tabClass} active`;
+          }
+        } else {
+          // For other tabs, set display and class accordingly
+          tabElement.style.display = 'none';
+          document.getElementsByClassName(tabClass)[0].className = tabClass;
+        }
+      }
     }
-  });
-}
+  }
+  
 
 /**
  * Search for items based on the input value and display matching results.

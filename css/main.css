@@ -79,15 +79,15 @@ td:first-child {font-weight: bold;}
 
 .legend {
   background-color: rgba(255, 255, 255, 1);
+  margin-bottom: 20px;
   border: 2px solid rgba(0,0,0,0.2);
   border-radius: 4px;
   padding: 20px 15px 10px 15px;
-  min-width: 150px;
-  max-width: 300px;
+  min-width: min(150px, 20vw);
+  max-width: max(150px, 15vw);
   min-height: 20vh;
   max-height: 40vh;
   overflow-y: auto;
-  z-index: 2;
 }
 
 .grid-container {
@@ -153,15 +153,6 @@ td:first-child {font-weight: bold;}
   padding: 0px;
 }
 
-
-/* Hide tab content for screens with height less than 600px */
-@media screen and (max-height: 600px), screen and (max-width: 800px){
-  .tab-content {
-    display: none;
-  }
-}
-
-
 .tab-1, .tab-2, .tab-3 {
   border: 2px solid rgba(0,0,0,0.2);
   border-radius: 2px;
@@ -183,18 +174,28 @@ td:first-child {font-weight: bold;}
   color: #fff; /* Change the text color for the active tab */
 }
 
-
-
 .tab-content {
   background: rgb(255, 255, 255);
   border-radius: 4px; 
   border: 2px solid rgba(0,0,0,0.2);
   padding:12px;
-  min-width: 400px;
-  max-width: 25vw;
+  min-width: min(200px, 30vw);
+  max-width: 300px;
 }
 
+/* Hide tab content for screens with height less than 600px */
+@media screen and (max-height: 600px), screen and (max-width: 800px){
+  .tab-content {
+    display: none;
+  }
+}
 
+/* 
+@media screen and (min-height: 601px), screen and (min-width: 801px){
+  .tab-content {
+    display: block;
+  }
+} */
 
 
 .form-container {
@@ -289,7 +290,7 @@ input:-webkit-autofill:active{
 }
 
 ::-webkit-scrollbar {
-  width: 10px;
+  width: 7.5px;
 }
 
 /* Track */
