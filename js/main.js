@@ -272,7 +272,14 @@ function highlightRouteClick(route_id) {
   // Agency Name
   let legendHTML = `<p style="margin-top:0"><strong>${highlightedFeatures[0].properties.agency_name}</strong></p>`;
   // Route Short Name + Route Long Name
-  legendHTML += `<span id="route-name">${highlightedFeatures[0].properties.route_short_name}</span> <label>${route_matched[0].route_long_name}</label><br><br>`;
+  legendHTML += `<div class="grid-container" style="margin-bottom: 15px;">
+                    <div>
+                      <span id="route-name">${highlightedFeatures[0].properties.route_short_name}</span>
+                    </div>
+                    <div>
+                      <label>${route_matched[0].route_long_name}</label>
+                    </div>
+                 </div>`;
   // Start/End point markers
   legendHTML += `<div class="grid-container">
                   <div>
