@@ -9,7 +9,8 @@ L.Control.Button = L.Control.extend({
     var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control buttons');
     var button = L.DomUtil.create('a', 'leaflet-control-button', container);
     L.DomEvent.disableClickPropagation(button);
-    button.innerHTML = '<i class="fa-solid fa-rotate-right" id="refresh_button"></i>';
+    button.id = 'refresh_button';
+    button.innerHTML = '<i class="fa-solid fa-rotate-right"></i>';
 
     return container;
   },
@@ -273,7 +274,7 @@ function highlightRouteClick(route_id) {
   let legendHTML = `<p style="margin-top:0"><strong>${highlightedFeatures[0].properties.agency_name}</strong></p>`;
   // Route Short Name + Route Long Name
   legendHTML += `<div class="grid-container" style="margin-bottom: 15px;">
-                    <div>
+                    <div class="legend-route-name">
                       <span id="route-name">${highlightedFeatures[0].properties.route_short_name}</span>
                     </div>
                     <div>
@@ -486,7 +487,7 @@ function resetClick(route_id) {
           previouslyActiveTab = i;
           tabElement.classList.remove('active');
           tabContent.style.display = 'none';
-          // document.getElementById(tabId).style.display = 'none';
+          document.getElementById(`tab-${previouslyActiveTab}`).style.display = 'none';
         }
       }
     } else {

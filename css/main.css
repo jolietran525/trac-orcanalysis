@@ -83,17 +83,24 @@ td:first-child {font-weight: bold;}
   border: 2px solid rgba(0,0,0,0.2);
   border-radius: 4px;
   padding: 20px 15px 10px 15px;
-  min-width: min(225px, 20vw);
-  max-width: 225px;
+  min-width: min(175px, 35vw);
+  width: min-content; 
   min-height: fit-content;
   max-height: 40vh;
   overflow-y: auto;
 }
 
+.legend-route-name {
+  /* Add specific styles for the route name */
+  display: inline-block;
+  white-space: nowrap; /* Prevent text from wrapping */
+}
+
+
 .grid-container {
   display: grid;
   grid-template-columns: auto auto;
-  gap: 10px;
+  column-gap: 5px;
   background: transparent;
 }
 
@@ -130,7 +137,7 @@ td:first-child {font-weight: bold;}
 }
 
 .buttons i {
-  -webkit-text-stroke-width: 0.5px;
+  -webkit-text-stroke-width: 0.25px;
   font-size: 1rem;
   text-align: center;
   vertical-align: middle;
