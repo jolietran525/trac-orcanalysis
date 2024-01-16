@@ -83,7 +83,7 @@ td:first-child {font-weight: bold;}
   border: 2px solid rgba(0,0,0,0.2);
   border-radius: 4px;
   padding: 20px 15px 10px 15px;
-  min-width: min(175px, 35vw);
+  min-width: min(170px, 20vw);
   width: min-content; 
   min-height: fit-content;
   max-height: 40vh;
@@ -116,6 +116,11 @@ td:first-child {font-weight: bold;}
   padding: 0;
 }
 
+.legend li {
+  display: block;
+  white-space: nowrap;
+}
+
 
 .legend li:hover {
   background-color: #e8e8e8;
@@ -123,8 +128,8 @@ td:first-child {font-weight: bold;}
 }
 
 .legend-color {
-  width: 2rem;
-  height: 1rem;
+  width: 1.75rem;
+  height: 0.85rem;
   display: inline-block;
   border: 2px solid rgba(0,0,0,0.2);
   border-radius: 2px;
@@ -145,9 +150,9 @@ td:first-child {font-weight: bold;}
 }
 
 .map-panel-tabs {
-  position: absolute; /* or position: absolute; */
-  top: 10px; /* Adjust the top position as needed */
-  left: 10px; /* Adjust the left position as needed */
+  position: absolute; 
+  top: 10px;
+  left: 10px; 
   flex-direction: column;
   width: fit-content;
   z-index: 3;
@@ -186,8 +191,8 @@ td:first-child {font-weight: bold;}
   border-radius: 4px; 
   border: 2px solid rgba(0,0,0,0.2);
   padding:12px;
-  min-width: min(250px, 25vw);
-  width: max(25vw, 285px);
+  min-width: min(250px, 20vw);
+  width: max(20vw, 250px);
 }
 
 /* Hide tab content for screens with height less than 600px */

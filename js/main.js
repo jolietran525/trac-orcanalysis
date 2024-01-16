@@ -207,9 +207,8 @@ function highlightRouteHover(route_id) {
   // Update the information displayed in the text-description element
   document.getElementById('text-description').innerHTML = `<p> <strong>${highlightedFeatures[0].properties.agency_name}<strong></p>`;
   document.getElementById('text-description').innerHTML += `<span id="route-name">${highlightedFeatures[0].properties.route_short_name}</span> <label>${route_matched[0].route_long_name}</label>`;
-  document.getElementById('text-description').innerHTML += `<p>This route takes <strong>${highlightedFeatures.length}</strong> different shapes.</p>`;
+  document.getElementById('text-description').innerHTML += `<p>This route takes <strong>${highlightedFeatures.length}</strong> ${highlightedFeatures.length > 1 ? 'shapes' : 'shape'}.</p>`;
 }
-
 /**
  * Reset style for hovered route, clear the information when hovering over a shape is ended.
  */
@@ -326,7 +325,7 @@ function highlightRouteClick(route_id) {
                         onmouseover="highlightShapeHover(${feature.properties.shape_id})"
                         onmouseout="resetHover()">
                             <span class="legend-color" style="background-color: ${colors[i]}" ></span>
-                            <label><strong>${feature.properties.trips_count}</strong> trips</label>
+                            <label><strong>${feature.properties.trips_count}</strong> ${feature.properties.trips_count > 1 ? 'trips' : 'trip'}</label>
                     </li>`;
     i++;
   });
