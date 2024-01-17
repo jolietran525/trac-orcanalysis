@@ -282,7 +282,7 @@ function highlightRouteClick(route_id) {
                  </div>`;
   // Start/End point markers
   legendHTML += `<div class="grid-container">
-                  <div style="margin-right: 5px;">
+                  <div style="margin-right: 10px;">
                     <span style=
                        "background-color: #FFFFFF;
                         width: 1rem;
