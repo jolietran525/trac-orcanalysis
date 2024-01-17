@@ -206,7 +206,7 @@ function highlightRouteHover(route_id) {
 
   // Update the information displayed in the text-description element
   document.getElementById('text-description').innerHTML = `<p> <strong>${highlightedFeatures[0].properties.agency_name}<strong></p>`;
-  document.getElementById('text-description').innerHTML += `<span id="route-name">${highlightedFeatures[0].properties.route_short_name}</span> <label>${route_matched[0].route_long_name}</label>`;
+  document.getElementById('text-description').innerHTML += `<div class="grid-container"><span id="route-name">${highlightedFeatures[0].properties.route_short_name}</span> <label>${route_matched[0].route_long_name}</label></div>`;
   document.getElementById('text-description').innerHTML += `<p>This route takes <strong>${highlightedFeatures.length}</strong> ${highlightedFeatures.length > 1 ? 'shapes' : 'shape'}.</p>`;
 }
 /**
@@ -273,7 +273,7 @@ function highlightRouteClick(route_id) {
   let legendHTML = `<p style="margin-top:0"><strong>${highlightedFeatures[0].properties.agency_name}</strong></p>`;
   // Route Short Name + Route Long Name
   legendHTML += `<div class="grid-container" style="margin-bottom: 15px;">
-                    <div class="legend-route-name">
+                    <div>
                       <span id="route-name">${highlightedFeatures[0].properties.route_short_name}</span>
                     </div>
                     <div>
@@ -282,7 +282,7 @@ function highlightRouteClick(route_id) {
                  </div>`;
   // Start/End point markers
   legendHTML += `<div class="grid-container">
-                  <div>
+                  <div style="margin-right: 5px;">
                     <span style=
                        "background-color: #FFFFFF;
                         width: 1rem;
@@ -291,7 +291,7 @@ function highlightRouteClick(route_id) {
                         border-radius: 50%;
                         border: 3px solid #000000;
                         vertical-align: text-bottom;
-                        margin-right: 10px;">
+                        margin-right: 5px;">
                     </span>
                     <label>Start</label>
                   </div>
@@ -304,13 +304,13 @@ function highlightRouteClick(route_id) {
                           -webkit-text-stroke-color: #000000;
                           font-size: 1.25rem;
                           vertical-align: text-bottom;
-                          margin-right: 10px;">
+                          margin-right: 5px;">
                     </i>
                     <label>End</label>
                   </div>
                 </div>`;
   // Extra info
-  legendHTML += `<p style="font-size: small;"><em>Click on the shape to show/hide the start and end point</em></p>`;
+  legendHTML += `<p style="font-size: small;"><em>Click on the items to show or hide the start and end points</em></p>`;
   // List of shape info
   legendHTML += `<ul style="margin-top:10px;">`;
 
@@ -324,8 +324,10 @@ function highlightRouteClick(route_id) {
     legendHTML  += `<li onclick="bringShapetoFront(${feature.properties.shape_id})"
                         onmouseover="highlightShapeHover(${feature.properties.shape_id})"
                         onmouseout="resetHover()">
+                        <div class="grid-container">
                             <span class="legend-color" style="background-color: ${colors[i]}" ></span>
                             <label><strong>${feature.properties.trips_count}</strong> ${feature.properties.trips_count > 1 ? 'trips' : 'trip'}</label>
+                        </div>
                     </li>`;
     i++;
   });
@@ -610,7 +612,11 @@ function displayMatchingItems(matchingItems) {
   // Display the matching items
   matchingItems.forEach(item => {
       let listItem = document.createElement('li');
-      listItem.innerHTML = `<span id="route-name">${item.route_short_name}</span> ${item.route_long_name}`;
+      listItem.innerHTML = `
+        <div class="grid-container">
+          <span id="route-name">${item.route_short_name}</span>
+          <label>${item.route_long_name}</label>
+        </div>`;
       resultsElement.appendChild(listItem);
 
       listItem.addEventListener('mouseover', function () {

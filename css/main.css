@@ -6,10 +6,11 @@ header {
   padding: 0;
 }
 
-body, p, ol, ul, td, label {
-  font: 1em/1.5em sans-serif;
+body, p, ol, ul, td, span, label {
+  font-family: sans-serif;
   font-size: 15px;
   user-select: none;
+  line-height: 1.5;
 }
 
 /* https://web.dev/one-line-layouts/ */
@@ -90,18 +91,13 @@ td:first-child {font-weight: bold;}
   overflow-y: auto;
 }
 
-.legend-route-name {
-  /* Add specific styles for the route name */
-  display: inline-block;
-  white-space: nowrap; /* Prevent text from wrapping */
-}
-
-
 .grid-container {
   display: grid;
   grid-template-columns: auto auto;
-  column-gap: 5px;
   background: transparent;
+  display: flex;
+  align-items: center; /* Align items vertically in the center */
+  gap: 20px;
 }
 
 .grid-container > div {
@@ -129,13 +125,13 @@ td:first-child {font-weight: bold;}
 
 .legend-color {
   width: 1.75rem;
-  height: 0.85rem;
+  height: 1rem;
   display: inline-block;
   border: 2px solid rgba(0,0,0,0.2);
   border-radius: 2px;
   vertical-align: text-bottom;
-  margin-right: 5px;
 }
+
 
 .buttons {
   cursor: pointer;
@@ -258,7 +254,7 @@ input:-webkit-autofill:active{
 }
 
 .dropdown-list li {
-  padding: 10px;
+  padding: 8px;
   cursor: pointer;
   transition: background-color 0.3s ease; /* Smooth background color transition */
 }
@@ -268,7 +264,9 @@ input:-webkit-autofill:active{
   padding: 5px;
   font-size: 15px;
   border-radius: 5px;
-  margin-right: 5px;
+  display: inline-block;
+  white-space: nowrap; 
+  line-height: 110%;
 }
 
 
