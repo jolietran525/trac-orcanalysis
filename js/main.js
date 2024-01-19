@@ -207,7 +207,7 @@ function highlightRouteHover(route_id) {
   // Update the information displayed in the text-description element
   document.getElementById('text-description').innerHTML = `<p> <strong>${highlightedFeatures[0].properties.agency_name}<strong></p>`;
   document.getElementById('text-description').innerHTML += `<div class="grid-container"><span id="route-name">${highlightedFeatures[0].properties.route_short_name}</span> <label>${route_matched[0].route_long_name}</label></div>`;
-  document.getElementById('text-description').innerHTML += `<p>This route takes <strong>${highlightedFeatures.length}</strong> ${highlightedFeatures.length > 1 ? 'shapes' : 'shape'}.</p>`;
+  document.getElementById('text-description').innerHTML += `<p>This route operates <strong>${highlightedFeatures.length}</strong> ${highlightedFeatures.length > 1 ? 'paths' : 'path'}.</p>`;
 }
 /**
  * Reset style for hovered route, clear the information when hovering over a shape is ended.
@@ -270,7 +270,7 @@ function highlightRouteClick(route_id) {
 
   // Construct legend HTML with route information:
   // Agency Name
-  let legendHTML = `<p style="margin-top:0"><strong>${highlightedFeatures[0].properties.agency_name}</strong></p>`;
+  let legendHTML = `<p style="margin-top:0;"><strong>${highlightedFeatures[0].properties.agency_name}</strong></p>`;
   // Route Short Name + Route Long Name
   legendHTML += `<div class="grid-container" style="margin-bottom: 15px;">
                     <div>
@@ -281,7 +281,7 @@ function highlightRouteClick(route_id) {
                     </div>
                  </div>`;
   // Start/End point markers
-  legendHTML += `<div class="grid-container">
+  legendHTML += `<div class="grid-container" id="legend-markers">
                   <div style="margin-right: 10px;">
                     <span style=
                        "background-color: #FFFFFF;
@@ -310,10 +310,12 @@ function highlightRouteClick(route_id) {
                   </div>
                 </div>`;
   // Extra info
-  legendHTML += `<p style="font-size: small;"><em>Click on the items to show or hide the start and end points</em></p>`;
   // List of shape info
-  legendHTML += `<ul style="margin-top:10px;">`;
+  legendHTML += `<p style="margin-bottom:0;"><strong>Weekly trip counts</strong>*</p>`;
+  legendHTML += `<p style="font-size: small; margin-top:2px; margin-bottom:5px;"><em>*Clickable items</em></p>`;
 
+  legendHTML += `<ul>`;
+  
   let shape_ids = [];
   let i = 0;
 
