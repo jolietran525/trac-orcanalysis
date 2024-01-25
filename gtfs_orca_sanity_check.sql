@@ -19,6 +19,20 @@ CREATE TABLE _test.kcm_trips_2022 AS
 CREATE TABLE _test.kcm_stop_times_2022 AS
 (SELECT * FROM _test.kcm_stop_times_2022);
 
+
+CREATE TABLE _test.kcm_calendar_2022 (
+	service_id TEXT PRIMARY KEY,
+	monday TEXT,
+	tuesday TEXT,
+	wednesday TEXT,
+	thursday TEXT,
+	friday TEXT,
+	saturday TEXT,
+	sunday TEXT,
+	start_date DATE,
+	end_date DATE
+);
+
 /*-- ADD CONSTRAINTS --*/
 
 ALTER TABLE _test.kcm_stops_2022
@@ -33,6 +47,7 @@ ALTER TABLE _test.kcm_routes_2022
 
 ALTER TABLE _test.kcm_trips_2022 
 	ADD CONSTRAINT PK_tripid PRIMARY KEY (trip_id),
+	ADD CONSTRAINT FK_serviceid FOREIGN KEY (service_id) REFERENCES _test.kcm_calendar_2022(service_id),
 	ADD CONSTRAINT FK_routeid FOREIGN KEY (route_id) REFERENCES _test.kcm_routes_2022(route_id);
 
 
@@ -275,4 +290,252 @@ SELECT * FROM _test.boardings_stops_compared
 LIMIT 1000;
 
 
--- TODO: define the direction for the GTFS, so we only choose the closest stop in the same direction
+
+
+
+
+
+-- TODO: define the direction for the GTFS that match with orca, so we only choose the closest stop in the same direction
+
+-- all distinct direction
+SELECT * FROM orca.directions d 
+
+
+-- different kind of direction for the boardings of route 2
+SELECT d.direction_descr, COUNT(*)
+FROM orca.v_boardings vb 
+JOIN orca.directions d
+ON d.direction_id = vb.direction_id 
+WHERE vb.route_number = '2' AND source_agency_id = '4'
+GROUP BY d.direction_descr 
+
+
+-- Show all the routes with more than 2 valid directions 
+SELECT vb.source_agency_id, vb.route_number, COUNT(DISTINCT vb.direction_id)
+FROM orca.v_boardings vb 
+JOIN orca.directions d
+ON d.direction_id = vb.direction_id 
+WHERE vb.direction_id != 3
+GROUP BY vb.source_agency_id, vb.route_number
+HAVING COUNT(DISTINCT vb.direction_id) > 2
+
+
+
+-- Get all the distinct direction for each route from orca
+-- and only get the transactions that are between the start and end date of the service from the gtfs
+-- Also create a rank for the count of dir, the count dir with the highest count is rank 1
+CREATE VIEW _test.route_dir AS (
+	WITH dt AS ( --GET dates FOR EACH route
+	    SELECT DISTINCT r.route_id, r.route_short_name, direction_id, min(c.start_date) start_date, max(c.end_date) end_date
+	    FROM _test.kcm_routes_2022 r 
+	    JOIN _test.kcm_trips_2022 t ON t.route_id = r.route_id
+	    JOIN _test.kcm_calendar_2022 c ON c.service_id = t.service_id
+	    GROUP BY r.route_id, r.route_short_name, direction_id
+	)
+	SELECT vb.route_number, dt.route_id, dt.route_short_name, dr.direction_descr, COUNT(*) dir_count,
+			RANK() OVER (PARTITION BY vb.route_number, dt.route_id ORDER BY COUNT(*) DESC) AS count_rank
+	FROM orca.v_boardings vb 
+	JOIN orca.directions dr
+		ON dr.direction_id = vb.direction_id
+	LEFT JOIN agency.pretty_routes pr
+		ON vb.route_number = pr.route_number
+	JOIN dt
+		ON (dt.route_short_name = vb.route_number OR dt.route_short_name = pr.route_name)
+	WHERE     vb.source_agency_id = '4' -- KCM
+		  AND vb.direction_id != 3 
+		  AND vb.device_dtm_pacific BETWEEN dt.start_date AND dt.end_date
+	GROUP BY vb.route_number, dt.route_id, dt.route_short_name, dr.direction_descr
+);
+
+
+
+
+-- Get all the percentage of the direction count over the maximum direction count
+-- We want to see that so that we can eliminate those direction that appeared with way too low frequency
+CREATE VIEW _test.route_dir_portion AS (
+	SELECT rd1.route_number, rd1.route_id, rd2.route_short_name, rd2.direction_descr, rd2.dir_count*1.0/rd1.dir_count*100 AS percent_over_max
+	FROM _test.route_dir rd1
+	JOIN _test.route_dir rd2
+		ON rd1.route_number = rd2.route_number
+			AND rd1.count_rank <= rd2.count_rank 
+	WHERE rd1.count_rank = 1 -- AND rd1.route_number IN ('161', '168', '331', '345', '45', '545', '550', '672', '676', '75') -- these ARE the routes WITH MORE than 2 directions
+);
+
+SELECT * FROM _test.route_dir_portion WHERE route_number IN ('161', '168', '331', '345', '45', '545', '550', '672', '676', '75')
+	
+
+
+-- TODO: Making a summary table with the consecutive direction_id
+-- then sort them by device date time 
+-- https://stackoverflow.com/q/30877926
+
+-- we want final table of route_number, device_id, direction_id, earliest_device_dtm_pacific, latest_device_dtm_pacific, earliest_device_location, latest_device_location, sum_passenger_count
+
+-- first, create a temp table that only contains the route 672 so we have smaller dataset to work with
+CREATE TABLE _test.v_boarding_672 AS (
+	WITH dt AS ( --GET dates FOR EACH route
+		    SELECT DISTINCT r.route_id, r.route_short_name, min(c.start_date) start_date, max(c.end_date) end_date
+		    FROM _test.kcm_routes_2022 r 
+		    JOIN _test.kcm_trips_2022 t ON t.route_id = r.route_id
+		    JOIN _test.kcm_calendar_2022 c ON c.service_id = t.service_id
+		    GROUP BY r.route_id, r.route_short_name
+		)
+	SELECT b.*
+	FROM orca.v_boardings b
+	LEFT JOIN agency.pretty_routes pr
+			ON b.route_number = pr.route_number
+	JOIN dt
+			ON (dt.route_short_name = b.route_number OR dt.route_short_name = pr.route_name)
+	WHERE b.device_location IS NOT NULL AND
+		  b.source_agency_id = 4 AND
+		  b.route_number = '672' AND 
+		  b.device_dtm_pacific BETWEEN dt.start_date AND dt.end_date);
+		 
+		 
+		 
+-- final table
+CREATE VIEW _test.summary_672 AS (
+	SELECT *
+	FROM (
+		SELECT DISTINCT ON (business_date, device_id, direction_id, grp)
+		          	  route_number
+					, device_id
+					, business_date
+					, direction_id
+					, device_dtm_pacific AS start_time
+					, max(device_dtm_pacific) OVER (PARTITION BY business_date, device_id, direction_id, grp) AS end_time
+	--				, stop_code
+					, FIRST_VALUE(stop_code) OVER (PARTITION BY business_date, device_id, direction_id, grp ORDER BY device_dtm_pacific) AS start_stop_code
+	    			, LAST_VALUE(stop_code)  OVER (PARTITION BY business_date, device_id, direction_id, grp ORDER BY device_dtm_pacific ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS end_stop_code
+	--    			, device_location
+	    			, FIRST_VALUE(device_location)  OVER (PARTITION BY business_date, device_id, direction_id, grp ORDER BY device_dtm_pacific) AS earliest_device_location
+	    			, LAST_VALUE(device_location)  OVER (PARTITION BY business_date, device_id, direction_id, grp ORDER BY device_dtm_pacific ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS latest_device_location
+	    			, COUNT(*)  OVER (PARTITION BY business_date, device_id, direction_id, grp ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS sum_passenger_count
+	--				, grp
+		FROM (
+			SELECT  route_number
+					, device_id
+					, business_date
+					, device_dtm_pacific
+					, direction_id
+					, stop_code
+					, device_location
+					, row_number() OVER (ORDER BY business_date, device_id, device_dtm_pacific)
+					, row_number() OVER (PARTITION BY business_date, device_id, direction_id ORDER BY business_date, device_id, device_dtm_pacific)
+				    , row_number() OVER (ORDER BY business_date, device_id, device_dtm_pacific)
+				    - row_number() OVER (PARTITION BY business_date, device_id, direction_id ORDER BY business_date, device_id, device_dtm_pacific) AS grp
+			  FROM  _test.v_boarding_672 ) t
+		ORDER BY business_date, device_id, direction_id, grp, device_dtm_pacific ) sub
+	ORDER BY start_time);
+	  
+
+SELECT *
+FROM _test.summary_672
+
+
+SELECT * FROM orca.directions d 
+
+
+
+
+
+-- GTFS direction processing
+
+
+-- Show the array of all distinct stops along the route for each distinct shape
+CREATE TABLE _test.stops_shape_array AS (
+	WITH dist AS (
+			SELECT DISTINCT t.route_id,
+							r.route_short_name,
+							t.shape_id,
+							t.direction_id,
+							COUNT(t.trip_id) AS trips_count,
+							st.stop_id,
+							st.stop_sequence,
+							s.stop_lon, --x
+							s.stop_lat --y
+			FROM _test.kcm_trips_2022 t
+			JOIN _test.kcm_routes_2022 r
+				ON t.route_id = r.route_id
+			JOIN _test.kcm_stop_times_2022 st 
+				ON st.trip_id = t.trip_id
+			JOIN _test.kcm_stops_2022 s
+				ON s.stop_id = st.stop_id
+			WHERE r.route_short_name = 'C Line'
+			GROUP BY t.shape_id, r.route_short_name, t.route_id, t.direction_id, st.stop_id, st.stop_sequence, s.stop_lon, s.stop_lat
+			ORDER BY t.shape_id, st.stop_sequence ASC
+			)
+	SELECT DISTINCT  route_id
+			, route_short_name
+			, shape_id
+			, direction_id
+			, trips_count
+			, ARRAY_AGG(stop_id) OVER (PARTITION BY route_id, shape_id, direction_id ORDER BY stop_sequence ASC ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS stops_arr
+			, array[CASE
+				WHEN (- FIRST_VALUE(stop_lon) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence) --AS start_stop_lon
+					+ LAST_VALUE(stop_lon) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)) > 0
+					THEN 'East'
+				ELSE 'West'
+			  END 
+			, CASE
+				WHEN (- FIRST_VALUE(stop_lat) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence) --AS start_stop_lat
+			    + LAST_VALUE(stop_lat) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)) > 0
+					THEN 'North'
+				ELSE 'South'
+			  END] AS dir
+			, - FIRST_VALUE(stop_lon) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence) --AS start_stop_lon
+				+ LAST_VALUE(stop_lon) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS del_lon --end_stop_lon
+			, - FIRST_VALUE(stop_lat) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence) --AS start_stop_lat
+			    + LAST_VALUE(stop_lat) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS del_lat --end_stop_lat
+			, COUNT(*) OVER (PARTITION BY route_id, shape_id, direction_id ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
+	FROM dist 
+);
+
+
+
+
+-- check for similarities of the shape based upon the containment of the stop_id
+SELECT  *, 
+		ARRAY (
+	        SELECT UNNEST(s1_arr)
+	        INTERSECT
+	        SELECT UNNEST(s2_arr)
+	    ) AS overlap_elements,
+	    array_length(
+	    	ARRAY (
+	        SELECT UNNEST(s1_arr)
+	        INTERSECT
+	        SELECT UNNEST(s2_arr)
+	    ), 1)*1.0/s2_stops*100 AS percent_overlap
+FROM  (
+        SELECT s1.route_id
+        	 , s1.shape_id AS s1_shape
+        	 , s2.shape_id AS s2_shape
+        	 , s1.direction_id AS s1_dir
+        	 , s2.direction_id AS s2_dir
+        	 , s1.trips_count AS s1_trips
+        	 , s2.trips_count AS s2_trips
+        	 , s1.stops_count AS s1_stops
+        	 , s2.stops_count AS s2_stops
+        	 , s1.stops_arr @> s2.stops_arr AS containment
+        	 , s1.stops_arr AS s1_arr
+             , s2.stops_arr AS s2_arr
+        FROM _test.stops_shape_array s1
+		JOIN _test.stops_shape_array s2
+		ON  s1.shape_id != s2.shape_id AND
+			s1.stops_count >= s2.stops_count AND 
+			s1.direction_id = s2.direction_id AND 
+			s1.stop_rank = 1
+	 ) q
+WHERE array_length(
+	    	ARRAY (
+	        SELECT UNNEST(s1_arr)
+	        INTERSECT
+	        SELECT UNNEST(s2_arr)
+	    ), 1)*1.0/s2_stops*100 >= 60;
+	    
+	   
+
+
+
+
