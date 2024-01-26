@@ -393,7 +393,7 @@ CREATE TABLE _test.v_boarding_672 AS (
 		 
 		 
 		 
--- final table
+-- final table for the summary of route 672
 CREATE VIEW _test.summary_672 AS (
 	SELECT *
 	FROM (
@@ -436,106 +436,200 @@ FROM _test.summary_672
 SELECT * FROM orca.directions d 
 
 
+-- all boardings within the valid dates from gtfs
+CREATE TABLE _test.boarding_within_gtfs_date AS (
+	WITH dt AS ( --GET dates FOR EACH route
+		    SELECT DISTINCT r.route_id, r.route_short_name, min(c.start_date) start_date, max(c.end_date) end_date
+		    FROM _test.kcm_routes_2022 r 
+		    JOIN _test.kcm_trips_2022 t ON t.route_id = r.route_id
+		    JOIN _test.kcm_calendar_2022 c ON c.service_id = t.service_id
+		    GROUP BY r.route_id, r.route_short_name
+		)
+	SELECT b.*
+	FROM orca.v_boardings b
+	LEFT JOIN agency.pretty_routes pr
+			ON b.route_number = pr.route_number
+	JOIN dt
+			ON (dt.route_short_name = b.route_number OR dt.route_short_name = pr.route_name)
+	WHERE b.device_location IS NOT NULL AND
+		  b.source_agency_id = 4 AND
+		  b.device_dtm_pacific BETWEEN dt.start_date AND dt.end_date);
 
 
 
--- GTFS direction processing
 
 
--- Show the array of all distinct stops along the route for each distinct shape
-CREATE TABLE _test.stops_shape_array AS (
-	WITH dist AS (
-			SELECT DISTINCT t.route_id,
-							r.route_short_name,
-							t.shape_id,
-							t.direction_id,
-							COUNT(t.trip_id) AS trips_count,
-							st.stop_id,
-							st.stop_sequence,
-							s.stop_lon, --x
-							s.stop_lat --y
-			FROM _test.kcm_trips_2022 t
-			JOIN _test.kcm_routes_2022 r
-				ON t.route_id = r.route_id
-			JOIN _test.kcm_stop_times_2022 st 
-				ON st.trip_id = t.trip_id
-			JOIN _test.kcm_stops_2022 s
-				ON s.stop_id = st.stop_id
-			WHERE r.route_short_name = 'C Line'
-			GROUP BY t.shape_id, r.route_short_name, t.route_id, t.direction_id, st.stop_id, st.stop_sequence, s.stop_lon, s.stop_lat
-			ORDER BY t.shape_id, st.stop_sequence ASC
-			)
-	SELECT DISTINCT  route_id
+CREATE TABLE _test.boading_summary_all AS (
+	SELECT sub.*, d.direction_descr
+	FROM (
+		SELECT DISTINCT ON (business_date, device_id, direction_id, grp)
+		          	  route_number
+					, device_id
+					, business_date
+					, direction_id
+					, device_dtm_pacific AS earliest_dtm_pacific
+					, max(device_dtm_pacific) OVER (PARTITION BY business_date, device_id, direction_id, grp) AS latest_dtm_pacific
+					, FIRST_VALUE(stop_code) OVER (PARTITION BY business_date, device_id, direction_id, grp ORDER BY device_dtm_pacific) AS earliest_stop_code
+	    			, LAST_VALUE(stop_code)  OVER (PARTITION BY business_date, device_id, direction_id, grp ORDER BY device_dtm_pacific ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS latest_stop_code
+	    			, FIRST_VALUE(device_location)  OVER (PARTITION BY business_date, device_id, direction_id, grp ORDER BY device_dtm_pacific) AS earliest_device_location
+	    			, LAST_VALUE(device_location)  OVER (PARTITION BY business_date, device_id, direction_id, grp ORDER BY device_dtm_pacific ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS latest_device_location
+	    			, COUNT(*)  OVER (PARTITION BY business_date, device_id, direction_id, grp ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS sum_passenger_count
+		FROM (
+			SELECT  route_number
+					, device_id
+					, business_date
+					, device_dtm_pacific
+					, direction_id
+					, stop_code
+					, device_location
+					, row_number() OVER (ORDER BY business_date, device_id, device_dtm_pacific)
+					, row_number() OVER (PARTITION BY business_date, device_id, direction_id ORDER BY business_date, device_id, device_dtm_pacific)
+				    , row_number() OVER (ORDER BY business_date, device_id, device_dtm_pacific)
+				    - row_number() OVER (PARTITION BY business_date, device_id, direction_id ORDER BY business_date, device_id, device_dtm_pacific) AS grp
+			  FROM  _test.boarding_within_gtfs_date ) t
+		ORDER BY business_date, device_id, direction_id, grp, device_dtm_pacific ) sub
+	JOIN orca.directions d 
+	ON d.direction_id = sub.direction_id
+	ORDER BY earliest_dtm_pacific);
+
+
+SELECT DISTINCT direction_descr 
+FROM _test.boading_summary_all
+WHERE route_number = '65'
+
+/* --------- GTFS direction processing --------- */
+
+-- Show the array of all distinct stops along the route for each distinct shape, also show the direction for each shape
+-- assume that all of the shape with the same direction_id is the subset of the shape with the most stops
+-- Therefore, we can get use the direction of the shape with the most stops as the standard direction (shape_direction)
+CREATE TABLE _test.gtfs_route_direction AS (
+	SELECT DISTINCT 
+			  route_id
 			, route_short_name
 			, shape_id
-			, direction_id
+			, direction_id AS gtfs_direction_id
 			, trips_count
-			, ARRAY_AGG(stop_id) OVER (PARTITION BY route_id, shape_id, direction_id ORDER BY stop_sequence ASC ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS stops_arr
-			, array[CASE
-				WHEN (- FIRST_VALUE(stop_lon) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence) --AS start_stop_lon
-					+ LAST_VALUE(stop_lon) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)) > 0
-					THEN 'East'
-				ELSE 'West'
-			  END 
-			, CASE
-				WHEN (- FIRST_VALUE(stop_lat) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence) --AS start_stop_lat
-			    + LAST_VALUE(stop_lat) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)) > 0
-					THEN 'North'
-				ELSE 'South'
-			  END] AS dir
-			, - FIRST_VALUE(stop_lon) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence) --AS start_stop_lon
-				+ LAST_VALUE(stop_lon) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS del_lon --end_stop_lon
-			, - FIRST_VALUE(stop_lat) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence) --AS start_stop_lat
-			    + LAST_VALUE(stop_lat) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS del_lat --end_stop_lat
-			, COUNT(*) OVER (PARTITION BY route_id, shape_id, direction_id ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
-	FROM dist 
+			, stops_count
+			, stops_arr
+			, dir AS og_direction
+			, FIRST_VALUE(dir)  OVER (PARTITION BY route_id, direction_id ORDER BY stops_count DESC) AS shape_direction
+	FROM (
+		WITH dist AS (
+				SELECT DISTINCT t.route_id,
+								r.route_short_name,
+								t.shape_id,
+								t.direction_id,
+								COUNT(t.trip_id) AS trips_count,
+								st.stop_id,
+								st.stop_sequence,
+								s.stop_lon, --x
+								s.stop_lat --y
+				FROM _test.kcm_trips_2022 t
+				JOIN _test.kcm_routes_2022 r
+					ON t.route_id = r.route_id
+				JOIN _test.kcm_stop_times_2022 st 
+					ON st.trip_id = t.trip_id
+				JOIN _test.kcm_stops_2022 s
+					ON s.stop_id = st.stop_id
+				GROUP BY t.shape_id, r.route_short_name, t.route_id, t.direction_id, st.stop_id, st.stop_sequence, s.stop_lon, s.stop_lat
+				ORDER BY t.shape_id, st.stop_sequence ASC
+				)
+		SELECT DISTINCT  route_id
+				, route_short_name
+				, shape_id
+				, direction_id
+				, trips_count
+				, ARRAY_AGG(stop_id) OVER (PARTITION BY route_id, shape_id, direction_id ORDER BY stop_sequence ASC ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS stops_arr
+				, array[CASE
+					WHEN (- FIRST_VALUE(stop_lon) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence) --AS start_stop_lon
+						+ LAST_VALUE(stop_lon) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)) > 0
+						THEN 'East'
+					ELSE 'West'
+				  END 
+				, CASE
+					WHEN (- FIRST_VALUE(stop_lat) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence) --AS start_stop_lat
+				    + LAST_VALUE(stop_lat) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)) > 0
+						THEN 'North'
+					ELSE 'South'
+				  END] AS dir
+	--			, - FIRST_VALUE(stop_lon) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence) --AS start_stop_lon
+	--				+ LAST_VALUE(stop_lon) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS del_lon --end_stop_lon
+	--			, - FIRST_VALUE(stop_lat) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence) --AS start_stop_lat
+	--			    + LAST_VALUE(stop_lat) OVER (PARTITION BY route_id, shape_id, direction_id  ORDER BY stop_sequence ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS del_lat --end_stop_lat
+				, COUNT(*) OVER (PARTITION BY route_id, shape_id, direction_id ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS stops_count
+		FROM dist ) sub
+	ORDER BY route_short_name, direction_id ASC, stops_count DESC
 );
 
 
 
 
 -- check for similarities of the shape based upon the containment of the stop_id
-SELECT  *, 
-		ARRAY (
-	        SELECT UNNEST(s1_arr)
-	        INTERSECT
-	        SELECT UNNEST(s2_arr)
-	    ) AS overlap_elements,
-	    array_length(
-	    	ARRAY (
-	        SELECT UNNEST(s1_arr)
-	        INTERSECT
-	        SELECT UNNEST(s2_arr)
-	    ), 1)*1.0/s2_stops*100 AS percent_overlap
-FROM  (
-        SELECT s1.route_id
-        	 , s1.shape_id AS s1_shape
-        	 , s2.shape_id AS s2_shape
-        	 , s1.direction_id AS s1_dir
-        	 , s2.direction_id AS s2_dir
-        	 , s1.trips_count AS s1_trips
-        	 , s2.trips_count AS s2_trips
-        	 , s1.stops_count AS s1_stops
-        	 , s2.stops_count AS s2_stops
-        	 , s1.stops_arr @> s2.stops_arr AS containment
-        	 , s1.stops_arr AS s1_arr
-             , s2.stops_arr AS s2_arr
-        FROM _test.stops_shape_array s1
-		JOIN _test.stops_shape_array s2
-		ON  s1.shape_id != s2.shape_id AND
-			s1.stops_count >= s2.stops_count AND 
-			s1.direction_id = s2.direction_id AND 
-			s1.stop_rank = 1
-	 ) q
-WHERE array_length(
-	    	ARRAY (
-	        SELECT UNNEST(s1_arr)
-	        INTERSECT
-	        SELECT UNNEST(s2_arr)
-	    ), 1)*1.0/s2_stops*100 >= 60;
+--SELECT  *, 
+--		ARRAY (
+--	        SELECT UNNEST(s1_arr)
+--	        INTERSECT
+--	        SELECT UNNEST(s2_arr)
+--	    ) AS overlap_elements,
+--	    array_length(
+--	    	ARRAY (
+--	        SELECT UNNEST(s1_arr)
+--	        INTERSECT
+--	        SELECT UNNEST(s2_arr)
+--	    ), 1)*1.0/s2_stops*100 AS percent_overlap
+--FROM  (
+--        SELECT s1.route_id
+--        	 , s1.shape_id AS s1_shape
+--        	 , s2.shape_id AS s2_shape
+--        	 , s1.direction_id AS s1_dir
+--        	 , s2.direction_id AS s2_dir
+--        	 , s1.trips_count AS s1_trips
+--        	 , s2.trips_count AS s2_trips
+--        	 , s1.stops_count AS s1_stops
+--        	 , s2.stops_count AS s2_stops
+--        	 , s1.stops_arr @> s2.stops_arr AS containment
+--        	 , s1.stops_arr AS s1_arr
+--             , s2.stops_arr AS s2_arr
+--        FROM _test.stops_shape_array s1
+--		JOIN _test.stops_shape_array s2
+--		ON  s1.shape_id != s2.shape_id AND
+--			s1.stops_count >= s2.stops_count AND 
+--			s1.direction_id = s2.direction_id AND 
+--			s1.stop_rank = 1
+--	 ) q
+--WHERE array_length(
+--	    	ARRAY (
+--	        SELECT UNNEST(s1_arr)
+--	        INTERSECT
+--	        SELECT UNNEST(s2_arr)
+--	    ), 1)*1.0/s2_stops*100 >= 60;
 	    
 	   
 
 
+-- sanity check for _test.gtfs_route_direction:
+--- 1. If og_direction and shape_direction arrays ALWAYS overlap??
+SELECT *
+FROM _test.gtfs_route_direction
+WHERE NOT og_direction && shape_direction; -- there IS route 22
+
+	-- see why
+	SELECT * FROM _test.gtfs_route_direction
+	WHERE route_short_name = '22'; -- This IS actually because the sub-shape IS just very short compared TO the standard one
+
+--- 2. If shape_direction of oppsite gtfs_direction_id arrays EVER overlap??
+SELECT *
+FROM _test.gtfs_route_direction d0
+JOIN _test.gtfs_route_direction d1
+ON 	   d0.route_id = d1.route_id
+   AND d0.gtfs_direction_id = 0
+   AND d1.gtfs_direction_id = 1
+WHERE d0.shape_direction && d1.shape_direction; -- routes: 121, 65
 
 
+SELECT *
+FROM _test.gtfs_route_direction
+WHERE route_short_name IN ('121', '65'); -- 121: East IS the common ELEMENT, 65: east IS common element
+
+
+SELECT * FROM agency.pretty_routes WHERE service_agency_id = '4'
