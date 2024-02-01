@@ -247,7 +247,7 @@ ON g.route_short_name = o.route_number OR g.route_short_name = pr.route_name;
 
 
 
--- Now we can join base on the route name, test with stop_code = '11130'
+-- join ONLY on the route name, test with stop_code = '11130'
 CREATE VIEW _test.boardings_stops_compared AS (
 	SELECT  orca.*,
 			gtfs.stop_id AS gtfs_stop_id,
@@ -293,15 +293,13 @@ LIMIT 1000;
 
 
 
-
+/* ---------- DATA MODIFICATION & INTEGRATION WITH DIRECTION BETWEEN ORCA & GTFS ---------- */
 
 -- TODO: define the direction for the GTFS that match with orca, so we only choose the closest stop in the same direction
 
--- all distinct direction
-SELECT * FROM orca.directions d 
+/* --------- Part 1: ORCA direction processing --------- */
 
-
--- different kind of direction for the boardings of route 2
+-- different kind of direction for the boardings of specific route -- route 2
 SELECT d.direction_descr, COUNT(*)
 FROM orca.v_boardings vb 
 JOIN orca.directions d
@@ -321,122 +319,9 @@ HAVING COUNT(DISTINCT vb.direction_id) > 2
 
 
 
--- Get all the distinct direction for each route from orca
--- and only get the transactions that are between the start and end date of the service from the gtfs
--- Also create a rank for the count of dir, the count dir with the highest count is rank 1
-CREATE VIEW _test.route_dir AS (
-	WITH dt AS ( --GET dates FOR EACH route
-	    SELECT DISTINCT r.route_id, r.route_short_name, direction_id, min(c.start_date) start_date, max(c.end_date) end_date
-	    FROM _test.kcm_routes_2022 r 
-	    JOIN _test.kcm_trips_2022 t ON t.route_id = r.route_id
-	    JOIN _test.kcm_calendar_2022 c ON c.service_id = t.service_id
-	    GROUP BY r.route_id, r.route_short_name, direction_id
-	)
-	SELECT vb.route_number, dt.route_id, dt.route_short_name, dr.direction_descr, COUNT(*) dir_count,
-			RANK() OVER (PARTITION BY vb.route_number, dt.route_id ORDER BY COUNT(*) DESC) AS count_rank
-	FROM orca.v_boardings vb 
-	JOIN orca.directions dr
-		ON dr.direction_id = vb.direction_id
-	LEFT JOIN agency.pretty_routes pr
-		ON vb.route_number = pr.route_number
-	JOIN dt
-		ON (dt.route_short_name = vb.route_number OR dt.route_short_name = pr.route_name)
-	WHERE     vb.source_agency_id = '4' -- KCM
-		  AND vb.direction_id != 3 
-		  AND vb.device_dtm_pacific BETWEEN dt.start_date AND dt.end_date
-	GROUP BY vb.route_number, dt.route_id, dt.route_short_name, dr.direction_descr
-);
 
 
-
-
--- Get all the percentage of the direction count over the maximum direction count
--- We want to see that so that we can eliminate those direction that appeared with way too low frequency
-CREATE VIEW _test.route_dir_portion AS (
-	SELECT rd1.route_number, rd1.route_id, rd2.route_short_name, rd2.direction_descr, rd2.dir_count*1.0/rd1.dir_count*100 AS percent_over_max
-	FROM _test.route_dir rd1
-	JOIN _test.route_dir rd2
-		ON rd1.route_number = rd2.route_number
-			AND rd1.count_rank <= rd2.count_rank 
-	WHERE rd1.count_rank = 1 -- AND rd1.route_number IN ('161', '168', '331', '345', '45', '545', '550', '672', '676', '75') -- these ARE the routes WITH MORE than 2 directions
-);
-
-SELECT * FROM _test.route_dir_portion WHERE route_number IN ('161', '168', '331', '345', '45', '545', '550', '672', '676', '75')
-	
-
-
--- TODO: Making a summary table with the consecutive direction_id
--- then sort them by device date time 
--- https://stackoverflow.com/q/30877926
-
--- we want final table of route_number, device_id, direction_id, earliest_device_dtm_pacific, latest_device_dtm_pacific, earliest_device_location, latest_device_location, sum_passenger_count
-
--- first, create a temp table that only contains the route 672 so we have smaller dataset to work with
-CREATE TABLE _test.v_boarding_672 AS (
-	WITH dt AS ( --GET dates FOR EACH route
-		    SELECT DISTINCT r.route_id, r.route_short_name, min(c.start_date) start_date, max(c.end_date) end_date
-		    FROM _test.kcm_routes_2022 r 
-		    JOIN _test.kcm_trips_2022 t ON t.route_id = r.route_id
-		    JOIN _test.kcm_calendar_2022 c ON c.service_id = t.service_id
-		    GROUP BY r.route_id, r.route_short_name
-		)
-	SELECT b.*
-	FROM orca.v_boardings b
-	LEFT JOIN agency.pretty_routes pr
-			ON b.route_number = pr.route_number
-	JOIN dt
-			ON (dt.route_short_name = b.route_number OR dt.route_short_name = pr.route_name)
-	WHERE b.device_location IS NOT NULL AND
-		  b.source_agency_id = 4 AND
-		  b.route_number = '672' AND 
-		  b.device_dtm_pacific BETWEEN dt.start_date AND dt.end_date);
-		 
-		 
-		 
--- final table for the summary of route 672
-CREATE VIEW _test.summary_672 AS (
-	SELECT *
-	FROM (
-		SELECT DISTINCT ON (business_date, device_id, direction_id, grp)
-		          	  route_number
-					, device_id
-					, business_date
-					, direction_id
-					, device_dtm_pacific AS start_time
-					, max(device_dtm_pacific) OVER (PARTITION BY business_date, device_id, direction_id, grp) AS end_time
-	--				, stop_code
-					, FIRST_VALUE(stop_code) OVER (PARTITION BY business_date, device_id, direction_id, grp ORDER BY device_dtm_pacific) AS start_stop_code
-	    			, LAST_VALUE(stop_code)  OVER (PARTITION BY business_date, device_id, direction_id, grp ORDER BY device_dtm_pacific ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS end_stop_code
-	--    			, device_location
-	    			, FIRST_VALUE(device_location)  OVER (PARTITION BY business_date, device_id, direction_id, grp ORDER BY device_dtm_pacific) AS earliest_device_location
-	    			, LAST_VALUE(device_location)  OVER (PARTITION BY business_date, device_id, direction_id, grp ORDER BY device_dtm_pacific ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS latest_device_location
-	    			, COUNT(*)  OVER (PARTITION BY business_date, device_id, direction_id, grp ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS sum_passenger_count
-	--				, grp
-		FROM (
-			SELECT  route_number
-					, device_id
-					, business_date
-					, device_dtm_pacific
-					, direction_id
-					, stop_code
-					, device_location
-					, row_number() OVER (ORDER BY business_date, device_id, device_dtm_pacific)
-					, row_number() OVER (PARTITION BY business_date, device_id, direction_id ORDER BY business_date, device_id, device_dtm_pacific)
-				    , row_number() OVER (ORDER BY business_date, device_id, device_dtm_pacific)
-				    - row_number() OVER (PARTITION BY business_date, device_id, direction_id ORDER BY business_date, device_id, device_dtm_pacific) AS grp
-			  FROM  _test.v_boarding_672 ) t
-		ORDER BY business_date, device_id, direction_id, grp, device_dtm_pacific ) sub
-	ORDER BY start_time);
-	  
-
-SELECT *
-FROM _test.summary_672
-
-
-SELECT * FROM orca.directions d 
-
-
--- all boardings within the valid dates from gtfs
+-- Filter all orca boardings within the valid dates from gtfs. Also include the route_short_name column so we can use it later when joining with GTFS
 CREATE TABLE _test.boarding_within_gtfs_date AS (
 	WITH dt AS ( --GET dates FOR EACH route
 		    SELECT DISTINCT r.route_id, r.route_short_name, min(c.start_date) start_date, max(c.end_date) end_date
@@ -445,7 +330,7 @@ CREATE TABLE _test.boarding_within_gtfs_date AS (
 		    JOIN _test.kcm_calendar_2022 c ON c.service_id = t.service_id
 		    GROUP BY r.route_id, r.route_short_name
 		)
-	SELECT b.*
+	SELECT dt.route_short_name, b.*
 	FROM orca.v_boardings b
 	LEFT JOIN agency.pretty_routes pr
 			ON b.route_number = pr.route_number
@@ -453,17 +338,69 @@ CREATE TABLE _test.boarding_within_gtfs_date AS (
 			ON (dt.route_short_name = b.route_number OR dt.route_short_name = pr.route_name)
 	WHERE b.device_location IS NOT NULL AND
 		  b.source_agency_id = 4 AND
-		  b.device_dtm_pacific BETWEEN dt.start_date AND dt.end_date);
+		  b.device_dtm_pacific BETWEEN dt.start_date AND dt.end_date
+);
 
 
 
+-- Handling routes with null directions:
+	-- If same business date, same route number, same device id,
+	-- AND the direction_id is 3 (unknown), then we should correct it with the VALID direction_id (NOT unknown) of the closest transaction
+	-- and these transactions must be within 30 mins apart 
 
 
-CREATE TABLE _test.boading_summary_all AS (
-	SELECT sub.*, d.direction_descr
+-- create a table of boardings with modified direction
+CREATE TABLE _test.transaction_correction  AS (
+	SELECT txn_id, corrected_direction_id AS direction_id
 	FROM (
-		SELECT DISTINCT ON (business_date, device_id, direction_id, grp)
-		          	  route_number
+		SELECT  s1.*
+				, s2.stop_code
+				, s2.device_location
+				, s2.direction_id AS corrected_direction_id
+				, ROW_NUMBER() OVER (PARTITION BY s1.txn_id ORDER BY (
+						CASE
+							WHEN s1.device_dtm_pacific <= s2.device_dtm_pacific
+								THEN s2.device_dtm_pacific - s1.device_dtm_pacific
+							WHEN s2.device_dtm_pacific <= s1.device_dtm_pacific
+								THEN s1.device_dtm_pacific - s2.device_dtm_pacific
+						END)
+					) AS ranked
+				, CASE
+					WHEN s1.device_dtm_pacific <= s2.device_dtm_pacific
+						THEN s2.device_dtm_pacific - s1.device_dtm_pacific
+					WHEN s2.device_dtm_pacific <= s1.device_dtm_pacific
+						THEN s1.device_dtm_pacific - s2.device_dtm_pacific
+				END AS time_difference
+		FROM _test.boarding_within_gtfs_date s1
+		JOIN _test.boarding_within_gtfs_date s2
+			ON  	s1.route_number = s2.route_number 
+				AND s1.device_id = s2.device_id  
+				AND s1.business_date = s2.business_date  
+				AND s1.direction_id = 3 
+				AND s2.direction_id != 3
+		) ranked_data
+	WHERE ranked = 1 AND time_difference <= '00:30:00'
+);
+
+
+/* ------ Extra Credits ------*/
+-- TODO: Making a summary table with the consecutive direction_id
+-- then sort them by device date time 
+-- https://stackoverflow.com/q/30877926
+
+-- we want final table of route_number, device_id, direction_id, earliest_device_dtm_pacific, latest_device_dtm_pacific, earliest_device_location, latest_device_location, sum_passenger_count
+
+-- left join with the transaction_correction table to get the corrected data
+-- NOTE: there is some problem with grouping the consecutive routes where there is no boardings,
+	-- because there is only 1 boarding on the first trip heading in direction A, the next trip with direction A and same device_id would be grouped together.
+	-- example: grp 10 of route 237
+-- from now on, the direction_id is the corrected ones
+CREATE TABLE _test.boading_summary_all AS (
+	SELECT sub.*
+	FROM (
+		SELECT DISTINCT ON (business_date, route_number, device_id, direction_id, grp)
+		          	  route_short_name
+					, route_number
 					, device_id
 					, business_date
 					, direction_id
@@ -474,30 +411,73 @@ CREATE TABLE _test.boading_summary_all AS (
 	    			, FIRST_VALUE(device_location)  OVER (PARTITION BY business_date, device_id, direction_id, grp ORDER BY device_dtm_pacific) AS earliest_device_location
 	    			, LAST_VALUE(device_location)  OVER (PARTITION BY business_date, device_id, direction_id, grp ORDER BY device_dtm_pacific ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS latest_device_location
 	    			, COUNT(*)  OVER (PARTITION BY business_date, device_id, direction_id, grp ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS sum_passenger_count
+	    			, grp
 		FROM (
-			SELECT  route_number
-					, device_id
-					, business_date
-					, device_dtm_pacific
-					, direction_id
-					, stop_code
-					, device_location
-					, row_number() OVER (ORDER BY business_date, device_id, device_dtm_pacific)
-					, row_number() OVER (PARTITION BY business_date, device_id, direction_id ORDER BY business_date, device_id, device_dtm_pacific)
-				    , row_number() OVER (ORDER BY business_date, device_id, device_dtm_pacific)
-				    - row_number() OVER (PARTITION BY business_date, device_id, direction_id ORDER BY business_date, device_id, device_dtm_pacific) AS grp
-			  FROM  _test.boarding_within_gtfs_date ) t
-		ORDER BY business_date, device_id, direction_id, grp, device_dtm_pacific ) sub
-	JOIN orca.directions d 
-	ON d.direction_id = sub.direction_id
+			SELECT    og.route_short_name 
+					, og.route_number
+					, og.device_id
+					, og.business_date
+					, og.device_dtm_pacific
+					, og.direction_id AS og_diretcion_id
+					, COALESCE(cr.direction_id, og.direction_id) AS direction_id
+					, og.stop_code
+					, og.device_location
+					, row_number() OVER (ORDER BY og.business_date, og.route_number, og.device_id, og.device_dtm_pacific)
+					, row_number() OVER (PARTITION BY og.business_date, og.route_number, og.device_id, og.direction_id ORDER BY og.device_dtm_pacific)
+				    , row_number() OVER (ORDER BY og.business_date, og.route_number,  og.device_id, og.device_dtm_pacific)
+				    - row_number() OVER (PARTITION BY og.business_date, og.route_number, og.device_id, og.direction_id ORDER BY og.device_dtm_pacific) AS grp
+			  FROM  _test.boarding_within_gtfs_date og
+		 LEFT JOIN  _test.transaction_correction cr
+		 			ON  og.txn_id = cr.txn_id  ) t
+		ORDER BY business_date, route_number, device_id, direction_id, grp, device_dtm_pacific ) sub
 	ORDER BY earliest_dtm_pacific);
 
 
-SELECT DISTINCT direction_descr 
-FROM _test.boading_summary_all
-WHERE route_number = '65'
 
-/* --------- GTFS direction processing --------- */
+
+-- Get all the distinct direction for each route from orca
+-- and only get the transactions that are between the start and end date of the service from the gtfs
+-- Also create a rank for the count of dir, the count dir with the highest count is rank 1
+CREATE TABLE _test.boading_direction_summary AS (
+	SELECT    b.route_short_name
+			, b.route_number
+			, b.direction_id
+			, d.direction_descr
+--			, COUNT(*) direction_count
+--			, SUM(COUNT(*))  OVER (PARTITION BY b.route_short_name, b.route_number ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS all_transaction
+			, COUNT(*)/SUM(COUNT(*))  OVER (PARTITION BY b.route_short_name, b.route_number ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)*100.0 AS percent_direction_all
+--			, SUM(CASE WHEN b.direction_id != 3 THEN COUNT(*) ELSE 0 END) OVER (PARTITION BY b.route_short_name, b.route_number ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS sum_direction_not_3
+			, CASE
+				WHEN b.direction_id != 3
+					THEN COUNT(*)/SUM(CASE WHEN b.direction_id != 3 THEN COUNT(*) ELSE 0 END) OVER (PARTITION BY b.route_short_name, b.route_number ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)*100
+				ELSE NULL
+			END AS percent_direction_not_null
+	FROM _test.boarding_within_gtfs_date b
+	JOIN orca.directions d ON b.direction_id = d.direction_id
+	GROUP BY b.route_short_name, b.route_number, b.direction_id, d.direction_descr
+	ORDER BY b.route_number ASC, percent_direction_all DESC
+);
+
+
+SELECT *
+FROM _test.boading_direction_summary
+WHERE direction_id != 3;
+
+
+SELECT *
+FROM _test.boading_direction_summary
+WHERE route_number IN (
+	SELECT route_number
+	FROM _test.boading_direction_summary
+	WHERE direction_id != 3
+	GROUP BY route_number
+	HAVING COUNT(DISTINCT direction_id) > 2
+)
+
+
+
+
+/* --------- Part 2: GTFS direction processing --------- */
 
 -- Show the array of all distinct stops along the route for each distinct shape, also show the direction for each shape
 -- assume that all of the shape with the same direction_id is the subset of the shape with the most stops
@@ -617,6 +597,7 @@ WHERE NOT og_direction && shape_direction; -- there IS route 22
 	SELECT * FROM _test.gtfs_route_direction
 	WHERE route_short_name = '22'; -- This IS actually because the sub-shape IS just very short compared TO the standard one
 
+	
 --- 2. If shape_direction of oppsite gtfs_direction_id arrays EVER overlap??
 SELECT *
 FROM _test.gtfs_route_direction d0
@@ -627,9 +608,137 @@ ON 	   d0.route_id = d1.route_id
 WHERE d0.shape_direction && d1.shape_direction; -- routes: 121, 65
 
 
+-- SOLUTION: Remove the common element of shape_direction between oppsite gtfs_direction_id with table update
+WITH ModifiedData AS (
+	SELECT DISTINCT 
+			  route_id
+			, route_short_name
+			, shape_id
+			, gtfs_direction_id
+			, trips_count
+			, stops_count
+			, stops_arr
+			, og_direction
+			, ARRAY (
+		        SELECT UNNEST(shape_direction)
+		        EXCEPT
+		        SELECT UNNEST(s2_shape_direction)
+		    ) AS new_shape_direction
+	FROM  (
+	        SELECT s1.*
+	             , s2.shape_direction AS s2_shape_direction
+	        FROM (	SELECT DISTINCT d0.*
+					FROM _test.gtfs_route_direction d0
+					JOIN _test.gtfs_route_direction d1
+					ON 	   d0.route_id = d1.route_id AND
+					   d0.gtfs_direction_id != d1.gtfs_direction_id
+					WHERE d0.shape_direction && d1.shape_direction) s1
+			JOIN _test.gtfs_route_direction s2
+			ON  s1.route_id = s2.route_id AND
+				s1.shape_id != s2.shape_id AND
+				s1.gtfs_direction_id != s2.gtfs_direction_id
+			WHERE s1.shape_direction && s2.shape_direction AND s1.route_short_name IN ('121', '65')
+		 ) q
+	ORDER BY route_id, gtfs_direction_id ASC, stops_count DESC )
+UPDATE _test.gtfs_route_direction AS original
+SET shape_direction = ModifiedData.new_shape_direction
+FROM ModifiedData
+WHERE 	  original.route_id = ModifiedData.route_id
+      AND original.shape_id = ModifiedData.shape_id
+      AND original.gtfs_direction_id = ModifiedData.gtfs_direction_id;
+
+
+     
+-- create the table with only route name, direction, and stop_id, and shape_direction, ignore all the variance of shape.
+CREATE TABLE _test.gtfs_route_direction_stop AS (
+	SELECT DISTINCT d.*, s.geom
+	FROM (
+		SELECT DISTINCT route_short_name, gtfs_direction_id, UNNEST(stops_arr) AS stop_id, shape_direction
+		FROM _test.gtfs_route_direction) d
+	JOIN _test.kcm_stops_2022 s
+		ON s.stop_id = d.stop_id );
+
+
+
+/* --------- Part 3: ORCA-GTFS INTERGRATION based on route_name & direction --------- */
+-- tables from ORCA:
+     -- 	  FROM  _test.boarding_within_gtfs_date og (original direction)
+	 --	 LEFT JOIN  _test.transaction_correction cr (corrected direction)
+	 --  LEFT JOIN  orca.directions (to get the direction description)
+     
+-- table from GTFS: _test.gtfs_route_direction_stop, 
+     
+     
+CREATE INDEX stop_geom_indx ON _test.gtfs_route_direction_stop USING gist(geom);
+CREATE INDEX device_location_indx ON _test.boarding_within_gtfs_date USING gist(device_location);
+-- first, left join ORCA with GTFS to see if there is any unmatched?
+	-- also, ignore those with direction_id = 3
+	-- we would join orca with gtfs based on route_short_name AND ARRAY[direction_descr] <@ gtfs.shape_direction
+
+
+CREATE TABLE _test.boardings_corrected_stop AS (
+	SELECT    txn_id
+		    , route_short_name
+		    , direction_id
+		    , direction_descr
+		    , shape_direction
+	        , stop_code	AS orca_stop_code  
+	        , device_location
+	        , stop_id AS gtfs_stop_id
+		    , geom AS gtfs_stop_location
+		    , distance_m
+	FROM (
+		WITH effective_directions AS (
+		    SELECT
+		          og.txn_id
+		        , og.device_location
+			    , og.route_short_name
+		        , og.stop_code
+		        , COALESCE(cr.direction_id, og.direction_id) AS direction_id
+		        , d.direction_descr
+		    FROM
+		        _test.boarding_within_gtfs_date og
+		    LEFT JOIN
+		        _test.transaction_correction cr ON og.txn_id = cr.txn_id
+		    LEFT JOIN 
+		    	orca.directions d ON d.direction_id = COALESCE(cr.direction_id, og.direction_id)
+		    WHERE
+		        COALESCE(cr.direction_id, og.direction_id) != 3
+		)
+		SELECT
+		      ed.*
+		    , gtfs.stop_id
+		    , gtfs.shape_direction
+		    , gtfs.geom
+		    , ST_Distance(st_transform(ed.device_location, 32610), st_transform(gtfs.geom, 32610)) AS distance_m
+		    , ROW_NUMBER() OVER (PARTITION BY ed.txn_id ORDER BY ST_Distance(st_transform(ed.device_location, 32610), st_transform(gtfs.geom, 32610))) ranked
+		FROM
+		    effective_directions ed
+		LEFT JOIN
+		    _test.gtfs_route_direction_stop gtfs ON ed.route_short_name = gtfs.route_short_name
+		    										AND ARRAY[ed.direction_descr] <@ gtfs.shape_direction
+		) AS t
+	WHERE ranked = 1 );
+	
+
+	
+	
 SELECT *
-FROM _test.gtfs_route_direction
-WHERE route_short_name IN ('121', '65'); -- 121: East IS the common ELEMENT, 65: east IS common element
+FROM _test.boardings_corrected_stop;
 
 
-SELECT * FROM agency.pretty_routes WHERE service_agency_id = '4'
+SELECT COUNT(*)
+FROM _test.boardings_corrected_stop;
+
+SELECT COUNT(DISTINCT txn_id)
+FROM _test.boardings_corrected_stop;
+
+
+
+SELECT b.*, s.geom AS orca_gtfs_geom,  ST_Distance(st_transform(device_location, 32610), st_transform(s.geom, 32610)) AS distance_orca_gtfs_code
+FROM _test.boardings_corrected_stop b
+LEFT JOIN _test.kcm_stops_2022 s
+	ON b.orca_stop_code = s.stop_code
+WHERE b.orca_stop_code != b.gtfs_stop_id::TEXT;
+
+
