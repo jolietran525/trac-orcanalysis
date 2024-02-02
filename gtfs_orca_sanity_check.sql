@@ -679,22 +679,22 @@ CREATE INDEX device_location_indx ON _test.boarding_within_gtfs_date USING gist(
 CREATE TABLE _test.boardings_corrected_stop AS (
 	SELECT    txn_id
 		    , route_short_name
-		    , direction_id
+		    , corrected_direction_id
 		    , direction_descr
 		    , shape_direction
 	        , stop_code	AS orca_stop_code  
-	        , device_location
-	        , stop_id AS gtfs_stop_id
-		    , geom AS gtfs_stop_location
-		    , distance_m
+	        , device_location AS orca_device_location
+	        , stop_id AS trac_stop_id
+		    , geom AS trac_stop_geom
+		    , distance_trac_orca
 	FROM (
-		WITH effective_directions AS (
+		WITH corrected_direction AS (
 		    SELECT
 		          og.txn_id
 		        , og.device_location
 			    , og.route_short_name
 		        , og.stop_code
-		        , COALESCE(cr.direction_id, og.direction_id) AS direction_id
+		        , COALESCE(cr.direction_id, og.direction_id) AS corrected_direction_id
 		        , d.direction_descr
 		    FROM
 		        _test.boarding_within_gtfs_date og
@@ -702,43 +702,99 @@ CREATE TABLE _test.boardings_corrected_stop AS (
 		        _test.transaction_correction cr ON og.txn_id = cr.txn_id
 		    LEFT JOIN 
 		    	orca.directions d ON d.direction_id = COALESCE(cr.direction_id, og.direction_id)
-		    WHERE
-		        COALESCE(cr.direction_id, og.direction_id) != 3
 		)
 		SELECT
-		      ed.*
+		      cd.*
 		    , gtfs.stop_id
 		    , gtfs.shape_direction
 		    , gtfs.geom
-		    , ST_Distance(st_transform(ed.device_location, 32610), st_transform(gtfs.geom, 32610)) AS distance_m
-		    , ROW_NUMBER() OVER (PARTITION BY ed.txn_id ORDER BY ST_Distance(st_transform(ed.device_location, 32610), st_transform(gtfs.geom, 32610))) ranked
+		    , ST_Distance(st_transform(cd.device_location, 32610), st_transform(gtfs.geom, 32610)) AS distance_trac_orca
+		    , ROW_NUMBER() OVER (PARTITION BY cd.txn_id ORDER BY ST_Distance(st_transform(cd.device_location, 32610), st_transform(gtfs.geom, 32610))) ranked
 		FROM
-		    effective_directions ed
+		    corrected_direction cd
 		LEFT JOIN
-		    _test.gtfs_route_direction_stop gtfs ON ed.route_short_name = gtfs.route_short_name
-		    										AND ARRAY[ed.direction_descr] <@ gtfs.shape_direction
+		    _test.gtfs_route_direction_stop gtfs ON cd.route_short_name = gtfs.route_short_name
+		    										AND cd.corrected_direction_id != 3
+		    										AND ARRAY[cd.direction_descr] <@ gtfs.shape_direction
 		) AS t
 	WHERE ranked = 1 );
 	
 
 	
 	
-SELECT *
-FROM _test.boardings_corrected_stop;
-
+SELECT COUNT(*)
+FROM _test.boarding_within_gtfs_date;
 
 SELECT COUNT(*)
-FROM _test.boardings_corrected_stop;
+FROM _test.boardings_corrected_stop; --MATCHED WITH _test.boarding_within_gtfs_date
 
 SELECT COUNT(DISTINCT txn_id)
 FROM _test.boardings_corrected_stop;
 
 
-
-SELECT b.*, s.geom AS orca_gtfs_geom,  ST_Distance(st_transform(device_location, 32610), st_transform(s.geom, 32610)) AS distance_orca_gtfs_code
+-- now, process of checking 
+WITH sd AS ( -- GET all stop directions FOR a given route and stop
+		SELECT  COALESCE(s1.route_short_name, s2.route_short_name) AS route_short_name
+				, COALESCE(s1.stop_id, s2.stop_id) AS stop_id
+				, COALESCE(s1.geom, s2.geom) AS geom
+				, array_cat(s1.shape_direction, s2.shape_direction) AS combined_shape_direction
+		FROM _test.gtfs_route_direction_stop s1
+		FULL OUTER JOIN _test.gtfs_route_direction_stop s2 
+		ON s1.route_short_name = s2.route_short_name 
+		AND s1.stop_id = s2.stop_id 
+		AND s1.gtfs_direction_id = 0
+		AND s2.gtfs_direction_id = 1
+)
+SELECT    b.*
+		, sd.geom AS orca_gtfs_geom
+		, ST_Distance(st_transform(b.orca_device_location, 32610), st_transform(sd.geom, 32610)) AS distance_orca_gtfs_code
+		, (ARRAY[b.direction_descr] <@ combined_shape_direction) AS containment
+		, CASE 
+			WHEN (b.orca_device_location IS NULL
+				  AND orca_stop_code IS NULL)
+				THEN NULL
+			WHEN (orca_device_location IS NOT NULL
+				  AND orca_stop_code IS NULL)
+				THEN (
+					CASE
+						WHEN distance_trac_orca <= 100 AND distance_trac_orca IS NOT NULL
+							THEN trac_stop_id::TEXT 
+						ELSE NULL
+					END )
+			WHEN (b.orca_device_location IS NOT NULL
+				  AND b.orca_stop_code IS NOT NULL
+				  AND sd.stop_id IS NOT NULL)
+				THEN (
+					CASE
+						WHEN (ST_Distance(st_transform(b.orca_device_location, 32610), st_transform(sd.geom, 32610)) <= 100)
+							THEN orca_stop_code
+						WHEN (distance_trac_orca <= 100 AND distance_trac_orca IS NOT NULL)
+							THEN trac_stop_id::TEXT
+						ELSE NULL
+					END )
+			WHEN (b.orca_device_location IS NOT NULL
+				  AND b.orca_stop_code IS NOT NULL
+				  AND sd.stop_id IS NULL)
+				THEN NULL --can't locate
+		  END AS chosen_stop_code
 FROM _test.boardings_corrected_stop b
-LEFT JOIN _test.kcm_stops_2022 s
-	ON b.orca_stop_code = s.stop_code
-WHERE b.orca_stop_code != b.gtfs_stop_id::TEXT;
+LEFT JOIN sd
+			ON b.orca_stop_code = sd.stop_id::TEXT AND
+			   b.route_short_name = sd.route_short_name;
 
+
+
+
+SELECT DISTINCT route_short_name FROM _test.gtfs_route_direction_stop
+/**-----------CREATE A PROCEDURE OF HANDLING ALL CASES OF ORCA-----------**/
+CREATE OR REPLACE PROCEDURE _test.locating_orca_stops() --TODO!!!
+  LANGUAGE plpgsql AS $$
+  DECLARE 
+  			_rec record;
+			_txn_id int8;
+			_distance_threshold REAL = 100.0;
+  BEGIN
+  	
+  END
+  $$;
 
