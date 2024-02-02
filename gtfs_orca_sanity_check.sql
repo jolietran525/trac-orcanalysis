@@ -733,54 +733,61 @@ FROM _test.boardings_corrected_stop;
 
 
 -- now, process of checking 
-WITH sd AS ( -- GET all stop directions FOR a given route and stop
-		SELECT  COALESCE(s1.route_short_name, s2.route_short_name) AS route_short_name
-				, COALESCE(s1.stop_id, s2.stop_id) AS stop_id
-				, COALESCE(s1.geom, s2.geom) AS geom
-				, array_cat(s1.shape_direction, s2.shape_direction) AS combined_shape_direction
-		FROM _test.gtfs_route_direction_stop s1
-		FULL OUTER JOIN _test.gtfs_route_direction_stop s2 
-		ON s1.route_short_name = s2.route_short_name 
-		AND s1.stop_id = s2.stop_id 
-		AND s1.gtfs_direction_id = 0
-		AND s2.gtfs_direction_id = 1
-)
-SELECT    b.*
-		, sd.geom AS orca_gtfs_geom
-		, ST_Distance(st_transform(b.orca_device_location, 32610), st_transform(sd.geom, 32610)) AS distance_orca_gtfs_code
-		, (ARRAY[b.direction_descr] <@ combined_shape_direction) AS containment
-		, CASE 
-			WHEN (b.orca_device_location IS NULL
-				  AND orca_stop_code IS NULL)
-				THEN NULL
-			WHEN (orca_device_location IS NOT NULL
-				  AND orca_stop_code IS NULL)
-				THEN (
-					CASE
-						WHEN distance_trac_orca <= 100 AND distance_trac_orca IS NOT NULL
-							THEN trac_stop_id::TEXT 
-						ELSE NULL
-					END )
-			WHEN (b.orca_device_location IS NOT NULL
-				  AND b.orca_stop_code IS NOT NULL
-				  AND sd.stop_id IS NOT NULL)
-				THEN (
-					CASE
-						WHEN (ST_Distance(st_transform(b.orca_device_location, 32610), st_transform(sd.geom, 32610)) <= 100)
-							THEN orca_stop_code
-						WHEN (distance_trac_orca <= 100 AND distance_trac_orca IS NOT NULL)
-							THEN trac_stop_id::TEXT
-						ELSE NULL
-					END )
-			WHEN (b.orca_device_location IS NOT NULL
-				  AND b.orca_stop_code IS NOT NULL
-				  AND sd.stop_id IS NULL)
-				THEN NULL --can't locate
-		  END AS chosen_stop_code
-FROM _test.boardings_corrected_stop b
-LEFT JOIN sd
-			ON b.orca_stop_code = sd.stop_id::TEXT AND
-			   b.route_short_name = sd.route_short_name;
+CREATE TABLE _test.finalized_boarding_stop AS (
+	WITH sd AS ( -- GET all stop directions FOR a given route and stop
+			SELECT  COALESCE(s1.route_short_name, s2.route_short_name) AS route_short_name
+					, COALESCE(s1.stop_id, s2.stop_id) AS stop_id
+					, COALESCE(s1.geom, s2.geom) AS geom
+					, array_cat(s1.shape_direction, s2.shape_direction) AS combined_shape_direction
+			FROM _test.gtfs_route_direction_stop s1
+			FULL OUTER JOIN _test.gtfs_route_direction_stop s2 
+			ON s1.route_short_name = s2.route_short_name 
+			AND s1.stop_id = s2.stop_id 
+			AND s1.gtfs_direction_id = 0
+			AND s2.gtfs_direction_id = 1
+	)
+	SELECT    b.*
+			, sd.geom AS orca_gtfs_geom
+			, ST_Distance(st_transform(b.orca_device_location, 32610), st_transform(sd.geom, 32610)) AS distance_orca_gtfs_code
+			, (ARRAY[b.direction_descr] <@ combined_shape_direction) AS containment
+			, CASE 
+				WHEN (b.orca_device_location IS NULL
+					  AND orca_stop_code IS NULL)
+					THEN NULL
+				WHEN (orca_device_location IS NOT NULL
+					  AND orca_stop_code IS NULL)
+					THEN (
+						CASE
+							WHEN distance_trac_orca <= 100 AND distance_trac_orca IS NOT NULL
+								THEN trac_stop_id::TEXT 
+							ELSE NULL
+						END )
+				WHEN (b.orca_device_location IS NOT NULL
+					  AND b.orca_stop_code IS NOT NULL
+					  AND sd.stop_id IS NOT NULL)
+					THEN (
+						CASE
+							WHEN (ST_Distance(st_transform(b.orca_device_location, 32610), st_transform(sd.geom, 32610)) <= 100)
+								THEN orca_stop_code
+							WHEN (distance_trac_orca <= 100 AND distance_trac_orca IS NOT NULL)
+								THEN trac_stop_id::TEXT
+							ELSE NULL
+						END )
+				WHEN (b.orca_device_location IS NOT NULL
+					  AND b.orca_stop_code IS NOT NULL
+					  AND sd.stop_id IS NULL)
+					THEN NULL --can't locate
+			  END AS chosen_stop_code
+	FROM _test.boardings_corrected_stop b
+	LEFT JOIN sd
+				ON b.orca_stop_code = sd.stop_id::TEXT AND
+				   b.route_short_name = sd.route_short_name
+);
+
+
+
+SELECT COUNT(*) FROM _test.boardings_corrected_stop; -- number OF count OF the finalized TABLE IS unmatch!!!!!!!!!
+
 
 
 
