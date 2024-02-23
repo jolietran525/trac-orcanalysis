@@ -356,7 +356,7 @@ function highlightRouteClick(route_id) {
           background: none;
           color: #FFFFFF;
           -webkit-text-stroke-width: 3px;
-          -webkit-text-stroke-color:${color_style};
+          -webkit-text-stroke-color: ${color_style};
           font-size: 1.5rem;
           left: -0.6rem;
           top: -1.5rem;
