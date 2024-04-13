@@ -54,12 +54,20 @@ SELECT DISTINCT(trac_agency_id) FROM _test.latest_gtfs_feeds;
 		-- for txn where BOTH stop_code and device_location is NULL, we cant verify this kind of data or standardize it
 	-- when joining ORCA with GTFS there might be several matched as the date could be overlapping
 	  	-- if this is the case, then we do ROW_NUMBER to only take mopt updated option
-CREATE TABLE _test.boarding_april23 AS (
+-- Old table: 5,016,712 rows
+---- ** New Orca extract with 2 new columns added ** ----
+CREATE TABLE _test.boarding_april23_20240413 AS (
 	WITH orca_with_latest_feed AS (
 		SELECT   gtfs.feed_id
 			   , gtfs.route_id -- we would use route_id, feed_id, and trac_agency_id TO JOIN btw orca AND gtfs later
 			   , gtfs.trac_agency_id 
 			   , orca.*
+			   , EXTRACT(DOW FROM orca.business_date) AS txn_dow
+			   , CASE 
+					WHEN date_trunc('day', orca.device_dtm_pacific) > orca.business_date
+						THEN TO_CHAR(orca.device_dtm_pacific, 'HH24:MI:SS')::INTERVAL + '24 hours'
+					ELSE TO_CHAR(orca.device_dtm_pacific, 'HH24:MI:SS')::INTERVAL
+				 END AS device_dtm_interval
 			   , ROW_NUMBER() OVER (
 			   		PARTITION BY orca.txn_id
 			   		ORDER BY gtfs.feed_id DESC ) AS latest_gtfs
