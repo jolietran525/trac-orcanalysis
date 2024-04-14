@@ -160,13 +160,27 @@ CREATE VIEW _test.gtfs_route_trip_stop_sequence AS (
 					, t.trip_id
 					, t.shape_id
 					, t.direction_id
-					, FIRST_VALUE(c.monday) OVER (PARTITION BY r.feed_id, r.trac_agency_id, r.route_id, t.trip_id ORDER BY c.monday DESC) AS monday
-					, FIRST_VALUE(c.tuesday) OVER (PARTITION BY r.feed_id, r.trac_agency_id, r.route_id, t.trip_id ORDER BY c.tuesday DESC) AS tuesday
-					, FIRST_VALUE(c.wednesday) OVER (PARTITION BY r.feed_id, r.trac_agency_id, r.route_id, t.trip_id ORDER BY c.wednesday DESC) AS wednesday
-					, FIRST_VALUE(c.thursday) OVER (PARTITION BY r.feed_id, r.trac_agency_id, r.route_id, t.trip_id ORDER BY c.thursday DESC) AS thursday
-					, FIRST_VALUE(c.friday) OVER (PARTITION BY r.feed_id, r.trac_agency_id, r.route_id, t.trip_id ORDER BY c.friday DESC) AS friday
-					, FIRST_VALUE(c.saturday) OVER (PARTITION BY r.feed_id, r.trac_agency_id, r.route_id, t.trip_id ORDER BY c.saturday DESC) AS saturday
-					, FIRST_VALUE(c.sunday) OVER (PARTITION BY r.feed_id, r.trac_agency_id, r.route_id, t.trip_id ORDER BY c.sunday DESC) AS sunday
+					, FIRST_VALUE(c.monday) OVER (
+						PARTITION BY r.feed_id, r.trac_agency_id, r.route_id, t.trip_id
+						ORDER BY c.monday DESC) AS monday
+					, FIRST_VALUE(c.tuesday) OVER (
+						PARTITION BY r.feed_id, r.trac_agency_id, r.route_id, t.trip_id
+						ORDER BY c.tuesday DESC) AS tuesday
+					, FIRST_VALUE(c.wednesday) OVER (
+						PARTITION BY r.feed_id, r.trac_agency_id, r.route_id, t.trip_id
+						ORDER BY c.wednesday DESC) AS wednesday
+					, FIRST_VALUE(c.thursday) OVER (
+						PARTITION BY r.feed_id, r.trac_agency_id, r.route_id, t.trip_id
+						ORDER BY c.thursday DESC) AS thursday
+					, FIRST_VALUE(c.friday) OVER (
+						PARTITION BY r.feed_id, r.trac_agency_id, r.route_id, t.trip_id
+						ORDER BY c.friday DESC ) AS friday
+					, FIRST_VALUE(c.saturday) OVER (
+						PARTITION BY r.feed_id, r.trac_agency_id, r.route_id, t.trip_id
+						ORDER BY c.saturday DESC) AS saturday
+					, FIRST_VALUE(c.sunday) OVER (
+						PARTITION BY r.feed_id, r.trac_agency_id, r.route_id, t.trip_id
+						ORDER BY c.sunday DESC) AS sunday
 					, st.arrival_time
 					, st.departure_time
 					, st.stop_id
