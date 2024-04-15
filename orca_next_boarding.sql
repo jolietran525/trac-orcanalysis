@@ -1001,10 +1001,10 @@ CREATE TABLE _test.trip_stop_april23_remaining AS (
 			   		WHEN b.device_mode_id = 10 OR b.device_mode_id = 11
 			   			THEN
 			   				gtfs_t.departure_time - b.device_dtm_interval >= INTERVAL '1 minutes'
-			   				AND gtfs_t.departure_time < b.device_dtm_interval + INTERVAL '45 minutes'
+			   				AND gtfs_t.departure_time - b.device_dtm_interval <= INTERVAL '45 minutes'
 			   		ELSE 
-			   			gtfs_t.departure_time - INTERVAL '5 minutes' <= b.device_dtm_interval 
-			   			AND gtfs_t.departure_time < b.device_dtm_interval + INTERVAL '45 minutes'
+			   			gtfs_t.departure_time - b.device_dtm_interval <= INTERVAL '5 minutes' 
+			   			AND gtfs_t.departure_time - b.device_dtm_interval < INTERVAL '45 minutes'
 			   	END
 		LEFT JOIN _test.gtfs_route_service_exception exc -- EXCEPTION service dates for the route/shape
 			ON exc.feed_id = gtfs_t.feed_id
