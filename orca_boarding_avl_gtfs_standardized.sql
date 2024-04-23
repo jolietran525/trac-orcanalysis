@@ -1117,29 +1117,29 @@ CREATE TABLE _test.boarding_action_final_april23_20240413 AS (
 						ELSE NULL -- extra case
 					END
 			END AS stop_location
-	FROM _test.boarding_avl_trac_gtfs_april23
+	FROM _test.boarding_avl_trac_gtfs_april23_20240413
 ); -- 5,016,712
 
 
 
 -- check all distinct values
 SELECT DISTINCT direction_note, direction_final
-FROM _test.boarding_action_final_april23;
+FROM _test.boarding_action_final_april23_20240413;
 
 
 SELECT DISTINCT direction_note, stop_note
-FROM _test.boarding_action_final_april23;
+FROM _test.boarding_action_final_april23_20240413;
 
  
 
 -- check if there are cases where we did not consider and they have 9999 code
 SELECT *
-FROM _test.boarding_action_final_april23
+FROM _test.boarding_action_final_april23_20240413
 WHERE direction_final = 9999 OR stop_final = '9999';
 
 
 SELECT *
-FROM _test.boarding_action_final_april23
+FROM _test.boarding_action_final_april23_20240413
 WHERE direction_note != -1 AND stop_location IS NOT NULL;
 
 
@@ -1154,7 +1154,7 @@ SELECT COUNT(*) AS  all_txn
 	 		AND direction_note = 1) * 1.0/COUNT(*) AS good_txn -- 75.9% stayed the same
      , count(*) FILTER (WHERE stop_final IS NOT NULL) * 1.0/COUNT(*) AS usable_txn -- 98.8% value can be used
      , count(*) FILTER (WHERE stop_final IS NULL) * 1.0/COUNT(*) AS ignore_txn -- 1.2% will be ignored
-FROM  _test.boarding_action_final_april23;
+FROM  _test.boarding_action_final_april23_20240413;
 
 
 
