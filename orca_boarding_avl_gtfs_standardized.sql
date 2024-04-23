@@ -964,7 +964,7 @@ CREATE TABLE _test.boarding_action_final_april23_20240413 AS (
 							THEN gtfs_trip_id --'gtfs'
 						WHEN gtfs_time_difference >= trac_time_difference -- orca-trac
 							THEN trac_trip_id
-						ELSE -99 -- extra case, this IS FOR double checking
+						ELSE '-99' -- extra case, this IS FOR double checking
 					END
 			END AS gtfs_trip_id
 			, trac_agency_id
@@ -1135,12 +1135,8 @@ FROM _test.boarding_action_final_april23_20240413;
 -- check if there are cases where we did not consider and they have 9999 code
 SELECT *
 FROM _test.boarding_action_final_april23_20240413
-WHERE direction_final = 9999 OR stop_final = '9999';
+WHERE direction_final = -99 OR stop_final = '-99';
 
-
-SELECT *
-FROM _test.boarding_action_final_april23_20240413
-WHERE direction_note != -1 AND stop_location IS NOT NULL;
 
 
 SELECT COUNT(*) AS  all_txn
