@@ -44,9 +44,55 @@ CREATE VIEW _test.latest_gtfs_feeds_20240413 AS (
 	WHERE latest_feed_rank = 1
 );
 
+
+SELECT *
+FROM _test.latest_gtfs_feeds_20240413
+WHERE route_short_name IS NULL; 
+
+SELECT *
+FROM trac.route_name_lookup;
+
+WITH latest_feed AS (
+		SELECT DISTINCT
+			   f.feed_id
+			 , r.route_id
+			 , r.route_short_name
+			 , r.route_long_name
+			 , f.agency_id AS trac_agency_id
+			 , min(c.start_date) start_date
+			 , max(c.end_date) end_date
+			 , ROW_NUMBER() OVER (
+			 	PARTITION BY   f.agency_id
+			 				 , r.route_id
+			 				 , min(c.start_date)
+			 				 , max(c.end_date)
+			 	ORDER BY f.feed_id DESC
+			 ) AS latest_feed_rank
+	    FROM _test.real_transitland_routes r 
+	    JOIN _test.real_gtfs_feeds f
+	    	ON r.feed_id = f.feed_id
+	    JOIN _test.real_transitland_trips t
+	    	ON t.feed_id = r.feed_id
+	    		AND t.route_id = r.route_id
+	    JOIN _test.real_transitland_calendar c
+	    	ON c.feed_id = t.feed_id
+	    		AND c.service_id = t.service_id
+	    GROUP BY r.route_id, f.feed_id, f.agency_id, r.route_short_name, r.route_long_name )
+	SELECT min(feed_id) feed_id1
+		   , max(feed_id) feed_id2
+		   , route_id
+		   , start_date
+		   , end_date
+	FROM latest_feed
+	GROUP BY route_id
+		   , start_date
+		   , end_date
+	HAVING COUNT(*) > 1;
+	
 SELECT count(*) FROM  _test.latest_gtfs_feeds_20240413; -- 1679
 
-	  
+
+
 -- test with transactions within April 2023
 	-- txn must have device_location NOT null OR stop_code NOT NULL
 		-- for txn where BOTH stop_code and device_location is NULL, we cant verify this kind of data or standardize it
@@ -79,7 +125,8 @@ CREATE TABLE _test.boarding_april23_20240413 AS (
 				OR trac.agency_id = lookup.trac_agency_id
 		JOIN _test.latest_gtfs_feeds_20240413 gtfs -- gtfs route valid START and END date
 			ON (gtfs.route_short_name = orca.route_number
-				OR COALESCE(gtfs.route_short_name, gtfs.route_long_name) ILIKE lookup.gtfs_route_name)
+				OR COALESCE(gtfs.route_short_name, gtfs.route_long_name) ILIKE lookup.gtfs_route_name
+				OR gtfs.route_id = orca.route_number ) -- New change 20240427: ALSO JOIN ON route_number
 			   AND orca.business_date BETWEEN gtfs.start_date AND gtfs.end_date
 			   AND gtfs.trac_agency_id = trac.agency_id
 		WHERE (orca.device_location IS NOT NULL OR orca.stop_code IS NOT NULL) 
@@ -97,9 +144,21 @@ WHERE (device_location IS NOT NULL OR stop_code IS NOT NULL)
 	  AND business_date BETWEEN '2023-04-01' AND '2023-04-30'; --5,025,858
 
 -- how many that we get eliminated because no data available?
-SELECT count(*) FROM orca.v_boardings
-WHERE (device_location IS NULL AND stop_code IS  NULL)
+SELECT * FROM orca.v_boardings
+WHERE (device_location IS NULL AND stop_code IS NULL)
 	  AND business_date BETWEEN '2023-04-01' AND '2023-04-30'; --203,282
+
+
+SELECT DISTINCT device_mode_id 
+FROM orca.v_boardings
+WHERE (direction_id IS NOT NULL OR stop_code IS NOT NULL)
+	  AND business_date BETWEEN '2023-04-01' AND '2023-04-30';
+	 
+SELECT *
+FROM _test.boarding_april23_20240413 april
+WHERE ;
+
+
 
 -- why only 5,016,712 get into the table??
 SELECT DISTINCT og.source_agency_id, og.service_agency_id, og.route_number, count(*)
@@ -107,7 +166,7 @@ FROM orca.v_boardings og
 LEFT JOIN trac.route_name_lookup lookup
 	ON og.route_number = lookup.route_number
 		AND og.service_agency_id = lookup.service_agency_id
-LEFT JOIN _test.boarding_april23 april
+LEFT JOIN _test.boarding_april23_20240413 april
 	ON og.txn_id = april.txn_id
 WHERE (og.device_location IS NOT NULL OR og.stop_code IS NOT NULL)
 	  AND og.business_date BETWEEN '2023-04-01' AND '2023-04-30'
@@ -115,8 +174,6 @@ WHERE (og.device_location IS NOT NULL OR og.stop_code IS NOT NULL)
 GROUP BY og.source_agency_id, og.service_agency_id, og.route_number;
 
 
--- all the distinct agency and route from gtfs
-SELECT DISTINCT trac_agency_id, route_short_name, route_long_name FROM _test.latest_gtfs_feeds;	
 
 
 
@@ -218,8 +275,8 @@ CREATE TABLE _test.gtfs_route_trip_direction_20240413 AS (
 
 
 
-     
-     
+
+
 -- !! Special Case: Pierce Transit (trac_agency_id = 6) !!
 -- This is the case where the direction in AVL is either Inbound (1) or Outbound (2)
 -- Therefore, we want to add the 1 and 2 into the alt_direction_id for direction_id of 1 and 0, respectively
@@ -377,9 +434,9 @@ CREATE VIEW _test.txn_correct_april23_20240413  AS (
 		FROM _test.boarding_april23 b1
 		JOIN _test.boarding_april23 b2
 			ON  	b1.route_number = b2.route_number 
-				AND b1.device_id = b2.device_id
-				AND b1.coach_number = b2.coach_number
-				AND b1.business_date = b2.business_date  
+				AND b1.device_id = b2.device_id -- same tapping device
+				AND b1.coach_number = b2.coach_number -- same vehicle
+				AND b1.business_date = b2.business_date 
 				AND b1.direction_id = 3 
 				AND b2.direction_id != 3
 		) ranked_data
@@ -442,6 +499,9 @@ CREATE TABLE _test.boarding_avl_april23_20240413 AS (
 ); -- 5,247,126
 
 
+SELECT *
+FROM _test.boarding_avl_april23_20240413
+WHERE route_number IN ('160', '161', '168');
 
 -- now, only select the first case
 CREATE TABLE _test.boarding_avl_april23_filtered_20240413 AS (
@@ -636,10 +696,15 @@ CREATE TABLE _test.boarding_avl_trac_april23_20240413_raw AS (
 						END ASC
 						, CASE
 							WHEN ARRAY[orca.stop_code] <@ gtfs.stops_arr -- prioritizing matching stop id 
-								THEN
+								THEN 
 									abs_interval(
-										((gtfs.first_stop_time - INTERVAL '3 minutes' + gtfs.last_stop_time + INTERVAL '15 minutes')/array_length(gtfs.stops_arr, 1))*array_position(gtfs.stops_arr, orca.stop_code)
-										- orca.device_dtm_interval)
+										( -- Calculate estimated arrival time for the stop based on sequence position and trip duration
+											-- estimate the time of arrival for a stop code based on the sequence of stops and the start and end time of the trip
+											(gtfs.first_stop_time - INTERVAL '3 minutes' + gtfs.last_stop_time + INTERVAL '15 minutes')
+											/array_length(gtfs.stops_arr, 1) -- Divide this duration by the number of stops to get the average time between stops
+										)  
+										* array_position(gtfs.stops_arr, orca.stop_code) --Multiply the average time between stops by the position of the stop code within the sequence to estimate the arrival time for that stop.
+									    - orca.device_dtm_interval) -- Subtract the estimated arrival time for the stop from the ORCA device timestamp to get the estimated time difference.
 							ELSE
 								abs_interval( ((gtfs.first_stop_time - INTERVAL '3 minutes' + gtfs.last_stop_time + INTERVAL '15 minutes')/2) - orca.device_dtm_interval)
 						END
@@ -1122,13 +1187,7 @@ CREATE TABLE _test.boarding_action_final_april23_20240413 AS (
 
 
 
--- check all distinct values
-SELECT DISTINCT direction_note, direction_final
-FROM _test.boarding_action_final_april23_20240413;
 
-
-SELECT DISTINCT direction_note, stop_note
-FROM _test.boarding_action_final_april23_20240413;
 
  
 
@@ -1136,6 +1195,8 @@ FROM _test.boarding_action_final_april23_20240413;
 SELECT *
 FROM _test.boarding_action_final_april23_20240413
 WHERE direction_final = -99 OR stop_final = '-99';
+
+
 
 
 
@@ -1150,7 +1211,31 @@ SELECT COUNT(*) AS  all_txn
 	 		AND direction_note = 1) * 1.0/COUNT(*) AS good_txn -- 75.9% stayed the same
      , count(*) FILTER (WHERE stop_final IS NOT NULL) * 1.0/COUNT(*) AS usable_txn -- 98.8% value can be used
      , count(*) FILTER (WHERE stop_final IS NULL) * 1.0/COUNT(*) AS ignore_txn -- 1.2% will be ignored
-FROM  _test.boarding_action_final_april23_20240413;
+     , COUNT(*) FILTER (
+     	WHERE og.device_location IS NULL
+     ) AS null_location
+     , COUNT(*) FILTER (
+     	WHERE og.device_location IS NULL
+     		  AND fixed.stop_location IS NOT NULL
+     ) AS fixed_location
+     , COUNT(*) FILTER (
+     	WHERE og.stop_code IS NULL
+     ) AS null_stop_code
+     , COUNT(*) FILTER (
+     	WHERE og.stop_code IS NULL
+     		  AND fixed.stop_final IS NOT NULL
+     ) AS fixed_stop_code
+FROM  _test.boarding_action_final_april23_20240413 fixed
+JOIN _test.boarding_april23_20240413 og
+ON fixed.txn_id = og.txn_id;
+
+
+
+SELECT fixed.*
+FROM  _test.boarding_action_final_april23_20240413 fixed
+JOIN _test.boarding_april23_20240413 og
+ON fixed.txn_id = og.txn_id
+WHERE og.route_number = '217';
 
 
 
