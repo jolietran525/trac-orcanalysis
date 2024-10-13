@@ -20,7 +20,7 @@ const Lmap = new LeafletMap();
 // var control = new L.Control.Button();
 // control.addTo(Lmap.map);
 
-
+let csvData;
 const stop_xfer = d3.csv("./data/20241008_orca_xfer_stop_summary_with_coords.csv")
 // stop_xfer.then(function(data) {
 //   data.forEach(function(d) {
@@ -36,6 +36,8 @@ const stop_xfer = d3.csv("./data/20241008_orca_xfer_stop_summary_with_coords.csv
 // });
 
 stop_xfer.then(data => {
+  csvData = data; // Store CSV data globally for later access
+
   // Create a Set to track unique stops based on stop_code, stop_lng, and stop_lat
   const uniqueStops = new Set();
 
@@ -91,122 +93,149 @@ stop_xfer.then(data => {
       ).join("<br>");
       
       layer.bindTooltip(popupContent);
+
+      // Step 2: Add click event to each layer
+      layer.on("click", () => {
+        const stopCode = feature.properties.stop_code; // Get stop_code from the feature
+        createTreemapForStop(stopCode); // Call the treemap function with the clicked stop_code
+      });
     }
   }).addTo(Lmap.map); // Assuming Lmap.map is your Leaflet map
 });
 
+let filteredData;
+let hierarchyData;
+function createTreemapForStop(stopCode) {
+  // Step 3: Filter the CSV data
+  filteredData = csvData.filter(d => d.stop_code === stopCode);
 
-/* ---------------------- GLOBAL VARIABLES / FUNCTIONS ---------------------- */
-// https://sashamaps.net/docs/resources/20-colors/
-// Global array that stores a list of color
-// let colors = ['#e6194B',
-//               '#3cb44b', 
-//               '#4363d8', 
-//               '#f58231', 
-//               '#f032e6', 
-//               '#fabed4', 
-//               '#469990', 
-//               '#800000', 
-//               '#9A6324',
-//               '#dcbeff', 
-//               '#42d4f4',
-//               '#000075',
-//               '#aaffc3', ];
+  // Group by to_agency and to_route, then sum passenger_count
+  const nestedData = d3.group(filteredData, d => d.to_agency, d => d.to_route);
 
-// // Global variable that stores the stops_checkbox in the Options tab in HTML doc
-// let stops_checkbox;
-
-// // Global variable that stores the routes.json data
-// let routes;
-
-// // Global variable that stores the layer of stops along each route
-// let routeStopLayer;
-
-// // Global that stores the source data for the routeStopLayer
-// let routeStop;
-
-// // Global variable that stores the layer of shapes for each route, with the 
-// let routeShapeLayer_base;
-
-// // Global variable that stores the route_shape.geojson data
-// let routeShape;
-
-// // Global variable that stores the layer with highlighted route upon hover data
-// let highlightRoute;
-
-// // Global variable that stores the currently clicked-on route_id
-// let currentHighlightedRouteId = null;
-
-// // Global variable that stores the refresh button from the HTML
-// const refresh_btn = document.getElementById("refresh_button");
-
-// // Add the event to the refresh_button, if there is any clicked-on route, unclick it and reset the style
-// refresh_btn.addEventListener("click", function () {
-//   resetHover();
-//   resetClick(currentHighlightedRouteId);
-// });
-
-// /**
-//  * Gets the color associated with a specific shape ID from a given array of shape IDs.
-//  *
-//  * @param {int} shape_id - The shape ID to find the color for.
-//  * @param {int[]} shape_ids - An array of shape IDs to search for a match.
-//  * @returns {string} - The color associated with the given shape ID, or undefined if not found.
-//  */
-// function getColorForEachShape(shape_id, shape_ids) {
-//   for (let i = 0; i < shape_ids.length; i++) {
-//     if (shape_id === shape_ids[i]) {
-//       return colors[i];
-//     }
-//   }
-// }
+  // Convert nested data into hierarchical format for treemap
+  hierarchyData = {
+    name: "root",  // Root node
+    children: Array.from(nestedData, ([agency, routes]) => ({
+      name: agency,  // to_agency as the parent node
+      children: Array.from(routes, ([route, values]) => ({
+        name: route,  // to_route as the child node
+        value: d3.sum(values, d => +d.passenger_count)  // Sum of passenger_count for each route
+      }))
+    }))
+  };
+  // Step 4: Call the createTreemap function
+  createTreemap(hierarchyData);
+}
 
 
-// /* -------- ROUTES JSON -------- */
+function createTreemap(hierarchyData) {
+  const container = d3.select("#treemap").node();
+  const width = container.clientWidth;
+  const height = container.clientHeight;
 
-// /**
-//  * Asynchronously fetches route data from the 'routes.json' file and assigns it to the 'routes' variable.
-//  * This function should be called to initialize the 'routes' variable with the fetched data.
-//  */
-// async function routes_data() {
-//   const response = await fetch('./data/routes.json');
-//   routes = await response.json();
-// }
+  // const color = d3.scaleOrdinal(d3.schemeCategory10);  // Color scale for nodes
+  const color = d3.scaleOrdinal(hierarchyData.children.map(d => d.name), d3.schemeTableau10);
 
-// // Call the routes_data function to fetch and initialize route data
-// routes_data();
+  const root = d3.treemap()
+    .tile(d3.treemapSquarify)
+    .size([width, height])
+    .padding(1)
+    .round(true)
+  (d3.hierarchy(hierarchyData)
+      .sum(d => d.value)
+      .sort((a, b) => b.value - a.value));
 
+  // Select the div to append the treemap SVG
+  d3.select("#treemap").selectAll("svg").remove(); // Clear any existing treemap
+  const svg = d3.select("#treemap")
+    .append("svg")
+    .attr("viewBox", [0, 0, width, height])
+    .attr("width", width)
+    .attr("height", height)
+    .attr("style", "max-width: 100%; height: auto; font: 12px sans-serif;");
 
-// /* -------- ROUTES with STOPS LAYER -------- */
-// // Fetch stops data for each route (routes_stops) using d3.json
-// const t_routeStop = d3.json("data/routes_stops.geojson");
-// t_routeStop.then(data => {
-//   routeStop = data;
+  // Create nodes for each element in the hierarchy
+  const nodes = svg.selectAll("g")
+    .data(root.leaves())  // Get only the leaf nodes (the `to_route` routes)
+    .join("g")
+      .attr("transform", d => `translate(${d.x0},${d.y0})`);
 
-//   // Define marker options for the stops on the map
-//   var geojsonMarkerOptions = {
-//     radius: 3.5,
-//     fillColor: "#ffffff",
-//     color: "#000000",
-//     weight: 2,
-//     opacity: 1,
-//     fillOpacity: 1
-//   };
+  // Helper function to create unique IDs
+  function uniqueId(prefix) {
+    return `${prefix}-${Math.floor(Math.random() * 100000)}`;
+  }
+  // Define format for the value
+  const format = d3.format(",d");  // Formats as integer with commas
 
-//   // Create a GeoJSON layer for route stops, initially set to NULL
-//   // Stops will be added to the map only when clicking on the route shape layer
-//   routeStopLayer  = L.geoJSON(null, {
-//     pointToLayer: function (feature, geom) {
-//       // Create a circle marker for each stop using the specified options
-//       return L.circleMarker(geom, geojsonMarkerOptions);
-//     },
-//     onEachFeature: (feature, layer) => {
-//       // Add a tooltip to each stop layer displaying the Stop ID
-//       layer.bindTooltip(`<strong>Stop ID:</strong> ${feature.properties.stop_id}`)
-//     }
-//   }).addTo(Lmap.map);
+  // nodes.append("title")
+  //   .text(d => `${d.ancestors().reverse().map(d => d.data.name).join(".")}\n${format(d.value)}`);
   
-// });
+  // nodes.append("title")
+  //   .text(d => {
+  //       const ancestors = d.ancestors().reverse();  // Get the array of ancestors in reverse order (root to leaf)
+  //       const labels = ancestors.map((d, i) => {
+  //           if (i === 0) return `Agency: ${d.data.name}`;  // Topmost ancestor labeled as "Agency"
+  //           if (i === ancestors.length - 2) return `Route: ${d.data.name}`;  // Second-to-last labeled as "Route"
+  //           return d.data.name;  // Any other level, just show the name
+  //       });
+        
+  //       // Concatenate the labels, join them with ".", and append "Count" with the formatted value
+  //       return `${labels.join(".")}\nCount: ${format(d.value)}`;
+  //   });
+
+  nodes.append("title")
+  .text(d => {
+    const ancestors = d.ancestors().reverse();
+    const agency = ancestors[1] ? ancestors[1].data.name : "";  // Agency level
+    const route = ancestors[2] ? ancestors[2].data.name : "";   // Route level
+    const count = format(d.value);  // Value for the current node
+
+    // Construct the tooltip based on levels
+    let tooltipText = "";
+    if (agency) {
+      tooltipText += `Agency: ${agency}\n`;
+    }
+    if (route) {
+      tooltipText += `Route: ${route}\n`;
+    }
+    tooltipText += `Count: ${count}`;
+    
+    return tooltipText;
+  });
+
+  // Add rectangles for each node
+  nodes.append("rect")
+    .attr("id", d => {
+      d.leafUid = uniqueId("leaf"); // Use a helper function to generate unique IDs
+      return d.leafUid;
+    })
+    .attr("fill", d => { while (d.depth > 1) d = d.parent; return color(d.data.name); })
+    .attr("fill-opacity", 0.6)
+    .attr("width", d => d.x1 - d.x0)
+    .attr("height", d => d.y1 - d.y0);
+
+  // Add a unique clipPath to each node
+  nodes.append("clipPath")
+      .attr("id", d => {
+        d.clipUid = uniqueId("clip"); // Use a helper function to generate unique IDs
+        return d.clipUid;
+      })
+    .append("use")
+      .attr("xlink:href", d => d.leafUid.href);  // Reference the unique clip path
+  
+  nodes.append("text")
+      .attr("clip-path", d => d.clipUid)
+    .selectAll("tspan")
+    .data(d => d.data.name.split(/(?=[A-Z][a-z])|\s+/g).concat(format(d.value)))
+    .join("tspan")
+      .attr("x", 3)
+      .attr("y", (d, i, nodes) => `${(i === nodes.length - 1) * 0.3 + 1.1 + i * 0.9}em`)
+      .attr("font-weight", (d, i, nodes) => i === nodes.length - 1 ? "normal" : "bold")  // Bold the first line (Route name)
+      .attr("fill-opacity", (d, i, nodes) => i === nodes.length - 1 ? 0.9 : null)
+      .text(d => d);
+}
+
+
 
 
 
