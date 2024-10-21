@@ -105,6 +105,24 @@ stop_xfer.then(data => {
 
 let filteredData;
 let hierarchyData;
+
+// Add the ResizeObserver to detect changes in the size of the #treemap div
+const resizeObserver = new ResizeObserver(entries => {
+  for (let entry of entries) {
+    // Get the new dimensions of #treemap
+    const width = entry.contentRect.width;
+    const height = entry.contentRect.height;
+    
+    // Recreate the treemap with the new dimensions
+    if (hierarchyData) {  // Only recreate if hierarchyData is available
+      createTreemap(hierarchyData);
+    }
+  }
+});
+
+// Start observing the #treemap div
+resizeObserver.observe(document.querySelector('#treemap'));
+
 function createTreemapForStop(stopCode) {
   // Step 3: Filter the CSV data
   filteredData = csvData.filter(d => d.stop_code === stopCode);
@@ -125,6 +143,8 @@ function createTreemapForStop(stopCode) {
   };
   // Step 4: Call the createTreemap function
   createTreemap(hierarchyData);
+  // Call the function initially and whenever the treemap data changes
+  adjustLayoutBasedOnTreemap();
 }
 
 
@@ -166,22 +186,6 @@ function createTreemap(hierarchyData) {
   }
   // Define format for the value
   const format = d3.format(",d");  // Formats as integer with commas
-
-  // nodes.append("title")
-  //   .text(d => `${d.ancestors().reverse().map(d => d.data.name).join(".")}\n${format(d.value)}`);
-  
-  // nodes.append("title")
-  //   .text(d => {
-  //       const ancestors = d.ancestors().reverse();  // Get the array of ancestors in reverse order (root to leaf)
-  //       const labels = ancestors.map((d, i) => {
-  //           if (i === 0) return `Agency: ${d.data.name}`;  // Topmost ancestor labeled as "Agency"
-  //           if (i === ancestors.length - 2) return `Route: ${d.data.name}`;  // Second-to-last labeled as "Route"
-  //           return d.data.name;  // Any other level, just show the name
-  //       });
-        
-  //       // Concatenate the labels, join them with ".", and append "Count" with the formatted value
-  //       return `${labels.join(".")}\nCount: ${format(d.value)}`;
-  //   });
 
   nodes.append("title")
   .text(d => {
@@ -233,6 +237,117 @@ function createTreemap(hierarchyData) {
       .attr("font-weight", (d, i, nodes) => i === nodes.length - 1 ? "normal" : "bold")  // Bold the first line (Route name)
       .attr("fill-opacity", (d, i, nodes) => i === nodes.length - 1 ? 0.9 : null)
       .text(d => d);
+}
+
+
+var treemap = document.querySelector('#treemap');
+var map = document.querySelector('#map');
+var mapArea = document.querySelector('#map-area');
+var startX, startWidth, totalWidth;
+let isResized = false; // Track if #treemap has been resized
+
+function adjustLayoutBasedOnTreemap() {
+  const svg = treemap.querySelector('svg');
+
+  if (!svg) {
+    // No SVG inside #treemap, hide #treemap and expand #map
+    treemap.style.flex = '0';
+    treemap.style.flexBasis = '0';
+    map.style.flex = '1';
+    map.style.flexBasis = '100%'; // Expand map to full width
+  } else {
+    // SVG exists
+    if (!isResized) {
+      // Only set flex properties to 50% on initial load or if not resized
+      treemap.style.flex = '1';
+      treemap.style.flexBasis = '50%';
+      map.style.flex = '1';
+      map.style.flexBasis = '50%'; // Split 50-50 by default
+      // Trigger Leaflet to update its size
+      Lmap.map.invalidateSize();
+      Lmap.map.setView(Lmap.map.getCenter());
+    }
+  }
+
+}
+
+// Call the function initially and whenever the treemap data changes
+adjustLayoutBasedOnTreemap();
+
+
+// Resize handler
+function updateLayoutOnResize() {
+  // Update flex-basis values based on current layout
+  const totalWidth = mapArea.getBoundingClientRect().width; // Get the total width of #map-area
+  const treemapWidth = parseInt(window.getComputedStyle(treemap).flexBasis) || 0;
+  const mapWidth = totalWidth - treemapWidth - 5; // 5px gap
+
+  // Set the new widths
+  if (treemapWidth > 0) {
+    treemap.style.flexBasis = `${treemapWidth}px`;
+    map.style.flexBasis = `${mapWidth}px`;
+  }
+}
+
+// Add resize event listener
+window.addEventListener('resize', () => {
+  updateLayoutOnResize();
+  // Call the function to adjust layout based on treemap data
+  adjustLayoutBasedOnTreemap();
+});
+
+
+// Add a mousemove event to adjust the cursor only when near the edge
+treemap.addEventListener('mousemove', function(e) {
+    const rect = treemap.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+
+    // Check if the mouse is within 10px of the left edge
+    if (offsetX < 10) {
+        treemap.style.cursor = 'ew-resize'; // Show resize cursor
+    } else {
+        treemap.style.cursor = 'default'; // Reset to default cursor
+    }
+});
+
+// Add event listener for mousedown to initiate the resize
+treemap.addEventListener('mousedown', function(e) {
+    const rect = treemap.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+
+    // Only start resizing if the click is within 10px of the left edge
+    if (offsetX < 10) {
+        startX = e.clientX;
+        startWidth = parseInt(document.defaultView.getComputedStyle(treemap).width, 10);
+        totalWidth = mapArea.getBoundingClientRect().width;  // Get the total width of #map-area
+        document.documentElement.addEventListener('mousemove', doDrag, false);
+        document.documentElement.addEventListener('mouseup', stopDrag, false);
+    }
+}, false);
+
+function doDrag(e) {
+    let deltaX = startX - e.clientX; // Reverse direction of dragging
+
+    let newTreemapWidth = startWidth + deltaX;
+
+    // Ensure the new width doesn't exceed container limits
+    if (newTreemapWidth < 50) newTreemapWidth = 50;
+    if (newTreemapWidth > totalWidth - 50) newTreemapWidth = totalWidth - 50;
+
+    let newMapWidth = totalWidth - newTreemapWidth - 5;
+
+    // Apply the new widths as flex-basis values
+    treemap.style.flex = `0 0 ${newTreemapWidth}px`;
+    map.style.flex = `0 0 ${newMapWidth}px`;
+}
+
+function stopDrag(e) {
+  isResized = true; 
+  // Trigger Leaflet to update its size
+  document.documentElement.removeEventListener('mousemove', doDrag, false);
+  document.documentElement.removeEventListener('mouseup', stopDrag, false);
+  Lmap.map.invalidateSize();
+  Lmap.map.setView(Lmap.map.getCenter());  
 }
 
 
@@ -680,69 +795,80 @@ function createTreemap(hierarchyData) {
 //   });
 // }
 
-// /**
-//  * Search for items based on the input value and display matching results.
-//  */
-// function search_function() {
-//     let input = document.getElementById('searchbar').value.toLowerCase();
+/**
+ * Search for items based on the input value and display matching results.
+ */
+function search_function() {
+    let input = document.getElementById('searchbar').value.toLowerCase();
 
-//     if (input.trim() === '') {
-//         // If the input is empty, clear the results
-//         clearResults();
-//     } else {
-//         let matchingItems = routes.filter(item => item.route_short_name.toLowerCase().includes(input));
-//         // Display the matching items
-//         displayMatchingItems(matchingItems);
-//     }
-// }
+    if (input.trim() === '') {
+        // If the input is empty, clear the results
+        clearResults();
+    } else {
+        let matchingItems = routes.filter(item => item.route_short_name.toLowerCase().includes(input));
+        // Display the matching items
+        displayMatchingItems(matchingItems);
+    }
+}
 
-// /**
-//  * Clear the previous search results.
-//  */
-// function clearResults() {
-//     // Assuming you have an element with the id "results" to display the matching items
-//     let resultsElement = document.getElementById('results');
+/**
+ * Clear the previous search results.
+ */
+function clearResults() {
+    // Assuming you have an element with the id "results" to display the matching items
+    let resultsElement = document.getElementById('results');
 
-//     // Clear previous results
-//     resultsElement.innerHTML = '';
-// }
+    // Clear previous results
+    resultsElement.innerHTML = '';
+}
 
-// /**
-//  * Display matching items in the results list.
-//  * @param {Array} matchingItems - The array of matching items to display.
-//  */
-// function displayMatchingItems(matchingItems) {
-//   let resultsElement = document.getElementById('results');
+/**
+ * Display matching items in the results list.
+ * @param {Array} matchingItems - The array of matching items to display.
+ */
+function displayMatchingItems(matchingItems) {
+  let resultsElement = document.getElementById('results');
 
-//   // Clear previous results
-//   clearResults();
+  // Clear previous results
+  clearResults();
 
-//   // Display the matching items
-//   matchingItems.forEach(item => {
-//       let listItem = document.createElement('li');
-//       listItem.innerHTML = `
-//         <div class="grid-container">
-//           <span id="route-name">${item.route_short_name}</span>
-//           <label>${item.route_long_name}</label>
-//         </div>`;
-//       resultsElement.appendChild(listItem);
+  // Display the matching items
+  matchingItems.forEach(item => {
+      let listItem = document.createElement('li');
+      listItem.innerHTML = `
+        <div class="grid-container">
+          <span id="route-name">${item.route_short_name}</span>
+          <label>${item.route_long_name}</label>
+        </div>`;
+      resultsElement.appendChild(listItem);
 
-//       listItem.addEventListener('mouseover', function () {
-//         highlightRouteHover(item.route_id);
-//       });
+      listItem.addEventListener('mouseover', function () {
+        highlightRouteHover(item.route_id);
+      });
 
-//       listItem.addEventListener('mouseout', function () {
-//         resetHover();
-//       });
+      listItem.addEventListener('mouseout', function () {
+        resetHover();
+      });
 
-//       // Add a click event listener to each list item
-//       listItem.addEventListener('click', function () {
-//           highlightRouteClick(item.route_id);
-//           if (stops_checkbox.checked) {
-//             addStopstoClickedLayer();
-//           }
-//           document.getElementsByClassName("dropdown-list")[0].style.display = "none"; // hide the drop-down content if one element is clicked
-//       });
+      // Add a click event listener to each list item
+      listItem.addEventListener('click', function () {
+          highlightRouteClick(item.route_id);
+          if (stops_checkbox.checked) {
+            addStopstoClickedLayer();
+          }
+          document.getElementsByClassName("dropdown-list")[0].style.display = "none"; // hide the drop-down content if one element is clicked
+      });
 
-//   });
-// }
+  });
+}
+
+/* Section: Side Bar ===================================================================== */ 
+// Set the width of the sidebar to 250px (show it)
+function openNav() {
+  document.getElementById("mySidepanel").style.width = "300px";
+}
+
+// Set the width of the sidebar to 0 (hide it)
+function closeNav() {
+  document.getElementById("mySidepanel").style.width = "0";
+}
