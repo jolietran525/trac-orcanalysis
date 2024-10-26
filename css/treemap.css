@@ -120,7 +120,7 @@ td:first-child {font-weight: bold;}
   z-index: 5; /* Stay on top */
   top: 0;
   left: 0;
-  background-color: #111; /* Black*/
+  background-color: white; /* Black*/
   overflow-x: hidden; /* Disable horizontal scroll */
   padding-top: 60px; /* Place content 60px from the top */
   transition: 0.5s; /* 0.5 second transition effect to slide in the sidepanel */
@@ -137,19 +137,21 @@ td:first-child {font-weight: bold;}
 }
 
 /* When you mouse over the navigation links, change their color */
-.sidepanel a:hover {
+.sidepanel .closebtn:hover, .openbtn:hover {
+  background-color: #444;
   color: #f1f1f1;
 }
 
 /* Position and style the close button (top right corner) */
 .sidepanel .closebtn {
   position: absolute;
-  background-color: #111;
-  color: white;
+  background-color: white;
+  color: #111;
   top: 0;
   right: 0;
   font-size: 36px;
   margin-left: 50px;
+  border: none;
   cursor: pointer;
 }
 
@@ -160,15 +162,11 @@ td:first-child {font-weight: bold;}
   left: 0;
   font-size: 20px;
   cursor: pointer;
-  background-color: #111;
-  color: white;
+  background-color: white;
+  color: #111;
   padding: 10px 15px;
-  border: none;
+  border: 1px solid rgba(61, 61, 61, 0.3);
   z-index: 3;
-}
-
-.openbtn:hover {
-  background-color: #444;
 }
 
 .legend {
@@ -294,15 +292,20 @@ td:first-child {font-weight: bold;}
 
 .form-container {
   width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  padding: 10px;
+  justify-content: space-between;
+  align-content: space-between;
   box-sizing: border-box; /* Ensure box-sizing is set */
 }
 
 #searchbar {
   width: 100%;
   display: block;
-  background: transparent;
+  background: white;
   border: 1px solid rgba(61, 61, 61, 0.3);
-  border-radius: 4px;
+  border-radius: 2px;
   z-index: 62;
   padding: 10px;
   box-sizing: border-box;

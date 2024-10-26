@@ -20,57 +20,137 @@ const Lmap = new LeafletMap();
 // var control = new L.Control.Button();
 // control.addTo(Lmap.map);
 
-let csvData;
-const stop_xfer = d3.csv("./data/20241008_orca_xfer_stop_summary_with_coords.csv")
-// stop_xfer.then(function(data) {
-//   data.forEach(function(d) {
-//       var lat = +d.stop_lat;
-//       var lon = +d.stop_lng;
-//       if (!isNaN(lat) && !isNaN(lon)) {
-//           L.marker([lat, lon]).addTo(Lmap.map);
-//       }
-//   });
-// })
-// .catch(function(error) {
-//   console.error("Error loading the CSV: ", error);
+// let csvData;
+// const stop_xfer = d3.csv("./data/20241008_orca_xfer_stop_summary_with_coords.csv")
+
+// stop_xfer.then(data => {
+//   csvData = data; // Store CSV data globally for later access
+
+//   // Create a Set to track unique stops based on stop_code, stop_lng, and stop_lat
+//   const uniqueStops = new Set();
+
+//   // Step 1: Convert CSV data into GeoJSON format and filter out duplicates
+//   const stopsGeoJson = {
+//     type: "FeatureCollection",
+//     features: data
+//       .filter(d => {
+//         // Create a unique identifier for each stop based on stop_code, stop_lng, and stop_lat
+//         const uniqueKey = `${d.stop_code}_${d.stop_lng}_${d.stop_lat}`;
+        
+//         // Check if this combination is already in the Set
+//         if (!uniqueStops.has(uniqueKey)) {
+//           uniqueStops.add(uniqueKey); // Add to Set if not present
+//           return true; // Keep this stop
+//         }
+//         return false; // Discard duplicate
+//       })
+//       .map(d => {
+//         return {
+//           type: "Feature",
+//           properties: {
+//             stop_code: d.stop_code
+//           }, // Add the created properties object
+//           geometry: {
+//             type: "Point",
+//             coordinates: [+d.stop_lng, +d.stop_lat] // Use 'stop_lat' and 'stop_lng' columns for coordinates
+//           }
+//         };
+//       })
+//   };
+
+//   // Step 2: Define marker options (similar to what you used with GeoJSON)
+//   const geojsonMarkerOptions = {
+//     radius: 3.5,
+//     fillColor: "#ffffff",
+//     color: "#000000",
+//     weight: 2,
+//     opacity: 1,
+//     fillOpacity: 1
+//   };
+
+//   // Step 3: Add the GeoJSON layer to the map with custom pointToLayer and onEachFeature functions
+//   const routeStopLayer = L.geoJSON(stopsGeoJson, {
+//     pointToLayer: function(feature, latlng) {
+//       // Create a circle marker at each lat/lon
+//       return L.circleMarker(latlng, geojsonMarkerOptions);
+//     },
+//     onEachFeature: function(feature, layer) {
+//       // Bind a tooltip to each marker showing one or more properties (e.g., stop_id)
+//       const popupContent = Object.keys(feature.properties).map(key => 
+//         `<strong>${key}:</strong> ${feature.properties[key]}`
+//       ).join("<br>");
+      
+//       layer.bindTooltip(popupContent);
+
+//       // Step 2: Add click event to each layer
+//       layer.on("click", () => {
+//         const stopCode = feature.properties.stop_code; // Get stop_code from the feature
+//         createTreemapForStop(stopCode); // Call the treemap function with the clicked stop_code
+//       });
+//     }
+//   }).addTo(Lmap.map); // Assuming Lmap.map is your Leaflet map
 // });
+
+let csvData;
+const stop_xfer = d3.csv("./data/20241008_orca_xfer_stop_summary_with_coords.csv");
+
+// Store the layer globally for easy reference during updates
+let routeStopLayer;
 
 stop_xfer.then(data => {
   csvData = data; // Store CSV data globally for later access
+  displayStopsOnMap(csvData); // Initial display of all stops on the map
+});
+
+/**
+ * Filter stops based on a given route and display them on the map.
+ * @param {string} routeFilter - The route to filter by.
+ */
+function filterStopsOnMap(routeFilter) {
+  // Filter the CSV data based on the input route
+  const filteredData = csvData.filter(d => d.from_route && d.from_route.includes(routeFilter));
+  displayStopsOnMap(filteredData);
+}
+
+/**
+ * Display the filtered stops on the map.
+ * @param {Array} data - Array of filtered stop data to display on the map.
+ */
+function displayStopsOnMap(data) {
+  // Remove the previous layer from the map if it exists
+  if (routeStopLayer) {
+    Lmap.map.removeLayer(routeStopLayer);
+  }
 
   // Create a Set to track unique stops based on stop_code, stop_lng, and stop_lat
   const uniqueStops = new Set();
 
-  // Step 1: Convert CSV data into GeoJSON format and filter out duplicates
+  // Convert filtered CSV data into GeoJSON format, filtering out duplicates
   const stopsGeoJson = {
     type: "FeatureCollection",
     features: data
       .filter(d => {
-        // Create a unique identifier for each stop based on stop_code, stop_lng, and stop_lat
         const uniqueKey = `${d.stop_code}_${d.stop_lng}_${d.stop_lat}`;
-        
-        // Check if this combination is already in the Set
         if (!uniqueStops.has(uniqueKey)) {
           uniqueStops.add(uniqueKey); // Add to Set if not present
           return true; // Keep this stop
         }
         return false; // Discard duplicate
       })
-      .map(d => {
-        return {
-          type: "Feature",
-          properties: {
-            stop_code: d.stop_code
-          }, // Add the created properties object
-          geometry: {
-            type: "Point",
-            coordinates: [+d.stop_lng, +d.stop_lat] // Use 'stop_lat' and 'stop_lng' columns for coordinates
-          }
-        };
-      })
+      .map(d => ({
+        type: "Feature",
+        properties: {
+          stop_code: d.stop_code,
+          from_route: d.from_route // Add any other properties you want to display
+        },
+        geometry: {
+          type: "Point",
+          coordinates: [+d.stop_lng, +d.stop_lat] // Convert to numbers for coordinates
+        }
+      }))
   };
 
-  // Step 2: Define marker options (similar to what you used with GeoJSON)
+  // Define marker options
   const geojsonMarkerOptions = {
     radius: 3.5,
     fillColor: "#ffffff",
@@ -80,28 +160,23 @@ stop_xfer.then(data => {
     fillOpacity: 1
   };
 
-  // Step 3: Add the GeoJSON layer to the map with custom pointToLayer and onEachFeature functions
-  const routeStopLayer = L.geoJSON(stopsGeoJson, {
-    pointToLayer: function(feature, latlng) {
-      // Create a circle marker at each lat/lon
-      return L.circleMarker(latlng, geojsonMarkerOptions);
-    },
-    onEachFeature: function(feature, layer) {
-      // Bind a tooltip to each marker showing one or more properties (e.g., stop_id)
-      const popupContent = Object.keys(feature.properties).map(key => 
-        `<strong>${key}:</strong> ${feature.properties[key]}`
-      ).join("<br>");
-      
+  // Add the GeoJSON layer to the map
+  routeStopLayer = L.geoJSON(stopsGeoJson, {
+    pointToLayer: (feature, latlng) => L.circleMarker(latlng, geojsonMarkerOptions),
+    onEachFeature: (feature, layer) => {
+      const popupContent = Object.keys(feature.properties)
+        .map(key => `<strong>${key}:</strong> ${feature.properties[key]}`)
+        .join("<br>");
       layer.bindTooltip(popupContent);
 
-      // Step 2: Add click event to each layer
+      // Add click event to each stop marker
       layer.on("click", () => {
-        const stopCode = feature.properties.stop_code; // Get stop_code from the feature
-        createTreemapForStop(stopCode); // Call the treemap function with the clicked stop_code
+        const stopCode = feature.properties.stop_code;
+        createTreemapForStop(stopCode);
       });
     }
-  }).addTo(Lmap.map); // Assuming Lmap.map is your Leaflet map
-});
+  }).addTo(Lmap.map);
+}
 
 let filteredData;
 let hierarchyData;
@@ -776,50 +851,54 @@ function stopDrag(e) {
 //     }
 //   }
   
-// /**
-//  * Focus on the form container and display the dropdown list.
-//  * Add an event listener to remove the focus when clicking outside the form container.
-//  */
-// function focusFormContainer() {
-//   // Get the form container element
-//   const formContainer = document.querySelector('.form-container');
+/**
+ * Focus on the form container and display the dropdown list.
+ * Add an event listener to remove the focus when clicking outside the form container.
+ */
+function focusFormContainer() {
+  // Get the form container element
+  const formContainer = document.querySelector('.form-container');
   
-//   document.getElementsByClassName("dropdown-list")[0].style.display = "block";
+  document.getElementsByClassName("dropdown-list")[0].style.display = "block";
   
-//   // Add an event listener to remove the class when clicking outside the form container
-//   document.addEventListener('click', function removeFocus(e) {
-//     if (!formContainer.contains(e.target)) {
-//       document.removeEventListener('click', removeFocus);
-//       document.getElementsByClassName("dropdown-list")[0].style.display = "none";
-//     }
-//   });
-// }
+  // Add an event listener to remove the class when clicking outside the form container
+  document.addEventListener('click', function removeFocus(e) {
+    if (!formContainer.contains(e.target)) {
+      document.removeEventListener('click', removeFocus);
+      document.getElementsByClassName("dropdown-list")[0].style.display = "none";
+    }
+  });
+}
 
 /**
  * Search for items based on the input value and display matching results.
  */
 function search_function() {
-    let input = document.getElementById('searchbar').value.toLowerCase();
+  // Get the search input value
+  let input = document.getElementById('searchbar').value.toLowerCase();
 
-    if (input.trim() === '') {
-        // If the input is empty, clear the results
-        clearResults();
-    } else {
-        let matchingItems = routes.filter(item => item.route_short_name.toLowerCase().includes(input));
-        // Display the matching items
-        displayMatchingItems(matchingItems);
-    }
+  // If the input is empty, clear the results and reset the map
+  if (input.trim() === '') {
+    clearResults();
+    displayStopsOnMap(csvData); // Reset to show all stops if input is cleared
+  } else {
+    // Filter routes based on the input value (searching by `route_short_name`)
+    let matchingItems = csvData.filter(d => d.from_route && d.from_route.toLowerCase().includes(input));
+    
+    // Display the matching items in a list (if applicable)
+    displayMatchingItems(matchingItems);
+    
+    // Filter stops on the map based on the input route
+    filterStopsOnMap(input);
+  }
 }
 
 /**
  * Clear the previous search results.
  */
 function clearResults() {
-    // Assuming you have an element with the id "results" to display the matching items
-    let resultsElement = document.getElementById('results');
-
-    // Clear previous results
-    resultsElement.innerHTML = '';
+  let resultsElement = document.getElementById('results');
+  resultsElement.innerHTML = '';
 }
 
 /**
@@ -828,39 +907,86 @@ function clearResults() {
  */
 function displayMatchingItems(matchingItems) {
   let resultsElement = document.getElementById('results');
-
-  // Clear previous results
   clearResults();
 
-  // Display the matching items
+  // Use a Set to store unique combinations of `from_agency` and `from_route`
+  const uniqueRoutes = new Set();
+
+  // Display each unique matching route
   matchingItems.forEach(item => {
+    const routeKey = `${item.from_agency}-${item.from_route}`; // Unique key for each combination
+
+    // Check if the combination is already displayed
+    if (!uniqueRoutes.has(routeKey)) {
+      uniqueRoutes.add(routeKey); // Mark this combination as displayed
+
       let listItem = document.createElement('li');
       listItem.innerHTML = `
         <div class="grid-container">
-          <span id="route-name">${item.route_short_name}</span>
-          <label>${item.route_long_name}</label>
+          <span id="route-name">${item.from_route}</span>
+          <label>${item.from_agency}</label>
         </div>`;
       resultsElement.appendChild(listItem);
 
-      listItem.addEventListener('mouseover', function () {
-        highlightRouteHover(item.route_id);
+      // Add click event to each list item to filter map stops by that route
+      listItem.addEventListener('click', () => {
+        filterStopsOnMap(item.from_route); // Filter the map by the clicked route
+        document.getElementsByClassName("dropdown-list")[0].style.display = "none"; // Hide the dropdown list
       });
-
-      listItem.addEventListener('mouseout', function () {
-        resetHover();
-      });
-
-      // Add a click event listener to each list item
-      listItem.addEventListener('click', function () {
-          highlightRouteClick(item.route_id);
-          if (stops_checkbox.checked) {
-            addStopstoClickedLayer();
-          }
-          document.getElementsByClassName("dropdown-list")[0].style.display = "none"; // hide the drop-down content if one element is clicked
-      });
-
+    }
   });
 }
+
+// /**
+//  * Clear the previous search results.
+//  */
+// function clearResults() {
+//     // Assuming you have an element with the id "results" to display the matching items
+//     let resultsElement = document.getElementById('results');
+
+//     // Clear previous results
+//     resultsElement.innerHTML = '';
+// }
+
+// /**
+//  * Display matching items in the results list.
+//  * @param {Array} matchingItems - The array of matching items to display.
+//  */
+// function displayMatchingItems(matchingItems) {
+//   let resultsElement = document.getElementById('results');
+
+//   // Clear previous results
+//   clearResults();
+
+//   // Display the matching items
+//   matchingItems.forEach(item => {
+//       let listItem = document.createElement('li');
+//       listItem.innerHTML = `
+//         <div class="grid-container">
+//           <span id="route-name">${item.route_short_name}</span>
+//           <label>${item.route_long_name}</label>
+//         </div>`;
+//       resultsElement.appendChild(listItem);
+
+//       listItem.addEventListener('mouseover', function () {
+//         highlightRouteHover(item.route_id);
+//       });
+
+//       listItem.addEventListener('mouseout', function () {
+//         resetHover();
+//       });
+
+//       // Add a click event listener to each list item
+//       listItem.addEventListener('click', function () {
+//           highlightRouteClick(item.route_id);
+//           if (stops_checkbox.checked) {
+//             addStopstoClickedLayer();
+//           }
+//           document.getElementsByClassName("dropdown-list")[0].style.display = "none"; // hide the drop-down content if one element is clicked
+//       });
+
+//   });
+// }
 
 /* Section: Side Bar ===================================================================== */ 
 // Set the width of the sidebar to 250px (show it)

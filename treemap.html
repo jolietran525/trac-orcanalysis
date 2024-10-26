@@ -46,10 +46,15 @@
   <main>
     <div id="mySidepanel" class="sidepanel">
       <button class="closebtn" onclick="closeNav()">&times;</button>
-      <a href="#">About</a>
-      <a href="#">Services</a>
-      <a href="#">Clients</a>
-      <a href="#">Contact</a>
+      <div class="form">
+        <div class="form-container" onclick="focusFormContainer()">
+          <!-- <p style="font-size:120%"> <strong>Search routes</strong> </p> -->
+          <input id="searchbar" onkeyup="search_function()" placeholder="Search routes..." aria-autocomplete="list" class="input" type="text" autocomplete="off">
+        </div>
+        <div class="dropdown-content" style="padding-bottom: 10px;">
+          <ul class="dropdown-list" id="results"></ul>
+        </div>
+      </div>
     </div>
     
     <button class="openbtn" onclick="openNav()">&#9776;</button>
