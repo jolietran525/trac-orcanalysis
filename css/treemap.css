@@ -462,6 +462,10 @@ input:-webkit-autofill:active{
   text-align: left; /* Align text to the left */
 }
 
+.tab-content th {
+  cursor: pointer;
+}
+
 .close-button {
   background: #333;
   color: #fff;
