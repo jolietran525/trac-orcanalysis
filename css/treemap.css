@@ -32,7 +32,7 @@ main {
 
 /* table styles */
 table {
-  display: inline-block;
+  display: table;
   vertical-align: top;
   /*white-space: nowrap;*/
   border-collapse: collapse;
@@ -415,32 +415,51 @@ input:-webkit-autofill:active{
   background: #555; 
 }
 
-.popup-overlay {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  background: #fff;
-  transition: 0.4s;
-}
-
 .popup-table {
-  background: #fff;
-  padding: 10px;
-  width: 100%;
-  max-width: 100%; /* Ensures it doesn't exceed the container width */
-  box-sizing: border-box; /* Includes padding in the width calculation */
+  background: #fff; /* Background color for the popup table */
+  padding: 10px; /* Padding inside the popup table */
+  width: 100%; /* Full width of the container */
+  max-width: 100%; /* Ensure it does not exceed the container width */
+  box-sizing: border-box; /* Include padding in width calculation */
 }
 
-.popup-table table {
-  width: 100%;
-  border-collapse: collapse;
+
+.popup-table .tabs {
+  display: flex; /* Flexbox for tabs */
+  margin-bottom: 10px; /* Space below the tabs */
+  width: 100%; /* Full width of the container */
 }
 
-.popup-table th, .popup-table td {
-  padding: 10px;
-  border: 1px solid #ddd;
-  text-align: left;
+.tab-button {
+  flex: 1; /* Each button takes equal space */
+  padding: 10px; /* Padding inside buttons */
+  cursor: pointer; /* Pointer cursor on hover */
+  border: none; /* No border */
+  background-color: #f1f1f1; /* Default background color */
+  text-align: center; /* Center text in buttons */
+}
+
+.tab-button.active {
+  background-color: #ddd; /* Background color for active tab */
+}
+
+.tab-content {
+  border: none; /* No border around tab content */
+  padding: 0; /* No padding */
+  width: 100%; /* Full width for tab content */
+  display: flex;
+}
+
+.tab-content table {
+  width: 100%; /* Make the table take full width */
+  border-collapse: collapse; /* Collapse borders for a cleaner look */
+  table-layout: fixed;
+}
+
+.tab-content th, .tab-content td {
+  padding: 10px; /* Padding inside table cells */
+  border: 1px solid #ddd; /* Border for table cells */
+  text-align: left; /* Align text to the left */
 }
 
 .close-button {
