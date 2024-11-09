@@ -435,6 +435,9 @@ input:-webkit-autofill:active{
   padding: 10px; /* Padding inside table cells */
   border: 1px solid #ddd; /* Border for table cells */
   text-align: left; /* Align text to the left */
+  overflow: hidden; /* Hide overflow content */
+  word-wrap: break-word; /* Break long words to fit within the cell */
+  word-break: break-word; /* Break words at any character to prevent overflow */
 }
 
 .tab-content th {

@@ -35,7 +35,19 @@ let colors = ['#e6194B',
               '#dcbeff', 
               '#42d4f4',
               '#000075',
-              '#aaffc3', ];
+              '#aaffc3' ];
+
+// Function to generate a palette of n colors
+function generatePalette(baseColors, n) {
+  const palette = [];
+  for (let i = 0; i < n; i++) {
+      const color = baseColors[i % baseColors.length];
+      palette.push(color);
+  }
+  return palette;
+}
+
+const palette = generatePalette(colors, 50);
 
 // Global variable that stores the stops_checkbox in the Options tab in HTML doc
 let stops_checkbox;
