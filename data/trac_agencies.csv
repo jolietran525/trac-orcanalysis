@@ -1,0 +1,12 @@
+agency_id,orca_agency_id,gtfs_agency_id,agency_name,abbrev,color,text_color,created_utc
+1,,,University of Washington,UW,#4b2e83,#ffffff,2024-05-08 00:43:28+00
+2,2,29,Community Transit,CT,#3357a7,#ffffff,2024-05-08 00:43:28+00
+3,3,97,Everett Transit,ET,#c92e36,#ffffff,2024-05-08 00:43:28+00
+4,4,1,King County Metro,KCM,#f5a623,#000000,2024-05-08 00:43:28+00
+5,5,kt,Kitsap Transit,KT,#f47320,#000000,2024-05-08 00:43:28+00
+6,6,3,Pierce Transit,PT,#026cb6,#ffffff,2024-05-08 00:43:28+00
+7,7,40,Sound Transit,ST,#008281,#ffffff,2024-05-08 00:43:28+00
+8,8,WSF,Washington State Ferries,WSF,#007b5f,#ffffff,2024-05-08 00:43:28+00
+9,,19,Intercity Transit,ICT,#003087,#ffffff,2024-05-08 00:43:28+00
+10,,1778,Seattle Center Monorail,SCM,#c70119,#ffffff,2024-05-08 00:43:28+00
+11,,98,Seattle Childrens Hospital,SCH,#cc4d16,#ffffff,2024-05-08 00:43:28+00

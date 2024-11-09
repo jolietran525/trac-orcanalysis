@@ -48,14 +48,34 @@
       <button class="closebtn" onclick="closeNav()">&times;</button>
       <div class="form">
         <div class="form-container" onclick="focusFormContainer()">
-          <!-- <p style="font-size:120%"> <strong>Search routes</strong> </p> -->
+          <p> <strong>From Routes</strong> </p>
           <input id="searchbar" onkeyup="search_function()" placeholder="Search routes..." aria-autocomplete="list" class="input" type="text" autocomplete="off">
         </div>
         <div class="dropdown-content" style="padding-bottom: 10px;">
           <ul class="dropdown-list" id="results"></ul>
         </div>
       </div>
-    </div>
+      
+      <!-- <div class="form">
+        <div class="form-container" onclick="focusFormContainer('from')">
+          <p><strong>From Routes</strong></p>
+          <input id="from_searchbar" onkeyup="search_function('from')" placeholder="Search routes..." aria-autocomplete="list" class="input" type="text" autocomplete="off">
+        </div>
+        <div class="dropdown-content" style="padding-bottom: 10px;">
+          <ul class="dropdown-list" id="from_results"></ul>
+        </div>
+      </div>
+
+      <div class="form">
+        <div class="form-container" onclick="focusFormContainer('to')">
+          <p><strong>To Routes</strong></p>
+          <input id="to_searchbar" onkeyup="search_function('to')" placeholder="Search routes..." aria-autocomplete="list" class="input" type="text" autocomplete="off">
+        </div>
+        <div class="dropdown-content" style="padding-bottom: 10px;">
+          <ul class="dropdown-list" id="to_results"></ul>
+        </div>
+      </div>
+       -->
     
     <button class="openbtn" onclick="openNav()">&#9776;</button>
 
@@ -69,6 +89,7 @@
   <!-- <script src="js/treemap.js"></script> -->
   <script src="js/stopFromToTable.js"></script>
   <script src="js/layout.js"></script>
+  <!-- <script src="js/search_from_to.js"></script> -->
   <script src="js/search.js"></script>
   <script src="js/sidebar.js"></script>
 </body>

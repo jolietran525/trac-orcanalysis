@@ -12,15 +12,21 @@
 const Lmap = new LeafletMap();
 
 // Store the layer globally for easy reference during updates
-let csvData, filteredData, routeStopLayer;
+let csvData, filteredData, routeStopLayer, agencyLookup = {};
 
-// Load and initialize CSV data
+// Load and initialize stop data
 d3.csv("./data/20241008_orca_xfer_stop_summary_with_coords.csv").then(data => {
-  csvData = data;
+  csvData = data.filter(d => d.stop_lat && d.stop_lng);
   filteredData = csvData;
   displayStopsOnMap(filteredData);
 });
 
+// Load the trac_agency.csv file and create a lookup table
+d3.csv("./data/trac_agencies.csv").then(data => {
+  data.forEach(d => {
+    agencyLookup[d.orca_agency_id] = d.agency_name;
+  });
+});
 
 /**
  * Filter stops based on a given route and agency, and display them on the map.
@@ -70,7 +76,6 @@ function displayStopsOnMap(data) {
       );
     //   layer.on("click", () => createTreemapForStop(feature.properties.stop_code));
       layer.on("click", () => createTableForStop(feature.properties.stop_code));
-
     }
   }).addTo(Lmap.map);
 }

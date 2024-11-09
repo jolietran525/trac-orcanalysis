@@ -11,31 +11,31 @@
  * Focus on the form container and display the dropdown list.
  * Add an event listener to remove the focus when clicking outside the form container.
  */
-function focusFormContainer() {
+function focusFormContainer(type) {
   // Get the form container element
-  const formContainer = document.querySelector('.form-container');
+  const formContainer = document.querySelector(`.form-container.${type}`);
   
-  document.getElementsByClassName("dropdown-list")[0].style.display = "block";
+  document.getElementById(`${type}_results`).style.display = "block";
   
   // Add an event listener to remove the class when clicking outside the form container
   document.addEventListener('click', function removeFocus(e) {
     if (!formContainer.contains(e.target)) {
       document.removeEventListener('click', removeFocus);
-      document.getElementsByClassName("dropdown-list")[0].style.display = "none";
+      document.getElementById(`${type}_results`).style.display = "none";
     }
   });
 }
-  
+
 /**
  * Search for items based on the input value and display matching results.
  */
-function search_function() {
+function search_function(type) {
   // Get the search input value
-  let input = document.getElementById('searchbar').value.toLowerCase();
+  let input = document.getElementById(`${type}_searchbar`).value.toLowerCase();
 
   // If the input is empty, clear the results and reset the map
   if (input.trim() === '') {
-    clearResults();
+    clearResults(type);
     filteredData = csvData; // Reset filteredData to the original data
     displayStopsOnMap(filteredData); // Reset to show all stops if input is cleared
   } else {
@@ -44,25 +44,26 @@ function search_function() {
       d.from_route && d.from_route.toLowerCase().includes(input) );
     
     // Display the matching items in a list (if applicable)
-    displayMatchingItems(matchingItems);
+    displayMatchingItems(matchingItems, type);
   }
 }
-  
+
 /**
  * Clear the previous search results.
  */
-function clearResults() {
-  let resultsElement = document.getElementById('results');
+function clearResults(type) {
+  let resultsElement = document.getElementById(`${type}_results`);
   resultsElement.innerHTML = '';
 }
 
 /**
  * Display matching items in the results list.
  * @param {Array} matchingItems - The array of matching items to display.
+ * @param {String} type - The type of search bar ('from' or 'to').
  */
-function displayMatchingItems(matchingItems) {
-  let resultsElement = document.getElementById('results');
-  clearResults();
+function displayMatchingItems(matchingItems, type) {
+  let resultsElement = document.getElementById(`${type}_results`);
+  clearResults(type);
 
   // Use a Set to store unique combinations of `from_agency` and `from_route`
   const uniqueRoutes = new Set();
@@ -86,11 +87,11 @@ function displayMatchingItems(matchingItems) {
 
       // Add click event to each list item to filter map stops by that specific route
       listItem.addEventListener('click', () => {
-        // Fill the search bar with the clicked item's route name
-        document.getElementById('searchbar').value = `${item.from_route} (${agencyLookup[item.from_agency]})`;
+        // Fill the search bar with the clicked item's route name and agency name in brackets
+        document.getElementById(`${type}_searchbar`).value = `${item.from_route} (${agencyLookup[item.from_agency]})`;
         
         filterStopsOnMap(item.from_route, item.from_agency); // Display only the clicked route on the map
-        document.getElementsByClassName("dropdown-list")[0].style.display = "none"; // Hide the dropdown list
+        document.getElementById(`${type}_results`).style.display = "none"; // Hide the dropdown list
         resultsElement.innerHTML = ''; // Clear the list after selection
       });
     }
