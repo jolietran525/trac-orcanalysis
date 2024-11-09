@@ -284,7 +284,7 @@ td:first-child {font-weight: bold;}
   box-sizing: border-box; /* Ensure box-sizing is set */
 }
 
-#searchbar {
+.searchbar {
   width: 100%;
   display: block;
   background: white;
@@ -295,7 +295,7 @@ td:first-child {font-weight: bold;}
   box-sizing: border-box;
 }
 
-#searchbar:focus {
+.searchbar:focus {
   border: 2px solid #469990; /* Change the border color when focused */
   outline: none; /* Remove the default focus outline */
 }

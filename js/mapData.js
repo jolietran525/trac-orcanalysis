@@ -24,7 +24,7 @@ d3.csv("./data/20241008_orca_xfer_stop_summary_with_coords.csv").then(data => {
 // Load the trac_agency.csv file and create a lookup table
 d3.csv("./data/trac_agencies.csv").then(data => {
   data.forEach(d => {
-    agencyLookup[d.orca_agency_id] = d.agency_name;
+    agencyLookup[d.agency_id] = d.agency_name;
   });
 });
 
@@ -59,7 +59,9 @@ function displayStopsOnMap(data) {
       return false;
     }).map(d => ({
       type: "Feature",
-      properties: { stop_code: d.stop_code, from_route: d.from_route },
+      properties: { 
+        stop_code: d.stop_code
+      },
       geometry: { type: "Point", coordinates: [+d.stop_lng, +d.stop_lat] }
     }))
   };
