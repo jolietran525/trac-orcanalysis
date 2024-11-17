@@ -46,17 +46,8 @@
   <main>
     <div id="mySidepanel" class="sidepanel">
       <button class="closebtn" onclick="closeNav()">&times;</button>
-      <!-- <div class="form">
-        <div class="form-container" onclick="focusFormContainer()">
-          <p> <strong>From Routes</strong> </p>
-          <input class="searchbar" onkeyup="search_function()" placeholder="Search routes..." aria-autocomplete="list" class="input" type="text" autocomplete="off">
-        </div>
-        <div class="dropdown-content" style="padding-bottom: 10px;">
-          <ul class="dropdown-list" id="results"></ul>
-        </div>
-      </div> -->
 
-      <div class="form">
+      <!-- <div class="form">
         <div class="form-container from" onclick="focusFormContainer('from')">
           <p>
             <strong>From Route</strong><br>
@@ -74,14 +65,31 @@
             <strong>To Route</strong><br>
             Filter for a route that riders get on.
           </p> 
-          <!-- <p>Get a route that riders get on</p> -->
           <input class= "searchbar" id="to_searchbar" onkeyup="search_function('to')" placeholder="Search routes..." aria-autocomplete="list" class="input" type="text" autocomplete="off">
         </div>
         <div class="dropdown-content" style="padding-bottom: 10px;">
           <ul class="dropdown-list" id="to_results"></ul>
         </div>
-      </div>
+      </div> -->
       
+      <!-- From Route Form -->
+      <div class="form-container from">
+        <label for="from_searchbar">From Route:</label>
+        <input type="search" class= "searchbar" id="from_searchbar" autocomplete="off" placeholder="Search for a route...">
+        <div class="dropdown-content" style="padding-bottom: 10px;">
+          <ul class="dropdown-list" id="from_results"></ul>
+        </div>
+      </div>
+
+      <!-- To Route Form -->
+      <div class="form-container to">
+        <label for="to_searchbar">To Route:</label>
+        <input type="search" class= "searchbar" id="to_searchbar" autocomplete="off" placeholder="Search for a route...">
+        <div class="dropdown-content" style="padding-bottom: 10px;">
+          <ul class="dropdown-list" id="to_results"></ul>
+        </div>
+      </div>
+
     </div>    
     <button class="openbtn" onclick="openNav()">&#9776;</button>
 
@@ -96,8 +104,10 @@
   <!-- <script src="js/treemap.js"></script> -->
   <script src="js/stopFromToTable.js"></script>
   <script src="js/layout.js"></script>
-  <script src="js/search.js"></script>
-  <script src="js/search_from_to.js"></script>
+  <!-- <script src="js/search.js"></script> -->
+  <!-- <script src="js/search_from_to.js"></script> -->
+  <!-- <script src="js/search_classObject.js"></script> -->
+  <script src="js/search_classObject_multiSelect.js"></script>
   <script src="js/sidebar.js"></script>
 </body>
 </html>
