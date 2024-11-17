@@ -38,6 +38,9 @@
     <!-- leaflet choropleth (https://github.com/timwis/leaflet-choropleth) -->
     <!--script src="libs/choropleth.js"></script-->
 
+    <!-- noUiSlider -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.5.0/nouislider.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.5.0/nouislider.min.js"></script>
     
     <link rel="stylesheet" href="css/treemap.css" />
   </head>
@@ -74,7 +77,10 @@
       
       <!-- From Route Form -->
       <div class="form-container from">
-        <label for="from_searchbar">From Route:</label>
+        <label for="from_searchbar">
+          <strong>From Route:</strong><br>
+          Filter for a route that riders transfer from.
+        </label>
         <input type="search" class= "searchbar" id="from_searchbar" autocomplete="off" placeholder="Search for a route...">
         <div class="dropdown-content" style="padding-bottom: 10px;">
           <ul class="dropdown-list" id="from_results"></ul>
@@ -83,14 +89,24 @@
 
       <!-- To Route Form -->
       <div class="form-container to">
-        <label for="to_searchbar">To Route:</label>
+        <label for="to_searchbar">
+          <strong>To Route:</strong><br>
+          Filter for a route that riders get on.
+        </label>
         <input type="search" class= "searchbar" id="to_searchbar" autocomplete="off" placeholder="Search for a route...">
         <div class="dropdown-content" style="padding-bottom: 10px;">
           <ul class="dropdown-list" id="to_results"></ul>
         </div>
       </div>
 
-    </div>    
+      <div class="form-container">
+        <label for="passenger_count_slider">
+          <strong>Passenger Counts</strong>
+        </label>
+        <div id="passenger_count_slider" class="noUi-target noUi-ltr noUi-horizontal noUi-txt-dir-ltr"></div>
+      </div>
+    </div>
+
     <button class="openbtn" onclick="openNav()">&#9776;</button>
 
     <div id="map-area">      
@@ -108,6 +124,7 @@
   <!-- <script src="js/search_from_to.js"></script> -->
   <!-- <script src="js/search_classObject.js"></script> -->
   <script src="js/search_classObject_multiSelect.js"></script>
+  <script src="js/passengerCountSlider.js"></script>
   <script src="js/sidebar.js"></script>
 </body>
 </html>

@@ -294,6 +294,14 @@ td:first-child {font-weight: bold;}
   box-sizing: border-box;
 }
 
+#passenger_count_slider {
+  width: 100%;
+  display: block;
+  z-index: 62;
+  margin: 10px;
+}
+
+
 .searchbar:focus {
   border: 2px solid #469990; /* Change the border color when focused */
   outline: none; /* Remove the default focus outline */
@@ -316,20 +324,19 @@ input:-webkit-autofill:active{
 }
 
 
-
 /* Style for the selected items container inside the search bar */
 .selected-items-container {
-  display: flex;
-  flex-wrap: wrap;
+  display: block;
   align-items: center;
   position: relative;
-  left: 10px; /* Adjust position as needed */
+  padding: 5px; /* Adjust position as needed */
   background-color: transparent;
 }
 
 /* Style for each selected item */
 .selected-item {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   background-color: #e0e0e0;
   border-radius: 4px;
@@ -484,5 +491,31 @@ input:-webkit-autofill:active{
   cursor: pointer;
   border-radius: 4px;
   float: right;
+}
+
+#passenger_count_slider {
+  margin: 10px 25px;
+}
+
+.noUi-horizontal .noUi-tooltip {
+  display: block;
+  position: absolute;
+  bottom: -150%; /* Position the tooltip below the slider */
+  left: 50%; /* Center the tooltip horizontally */
+  border: 1px solid #D9D9D9;
+  border-radius: 3px;
+  background: #fff;
+  color: #000;
+  padding: 5px;
+  text-align: center;
+  white-space: nowrap;
+  margin-top: 5px; /* Add spacing between the slider and tooltip */
+  font-size: 12px;
+}
+
+
+/* Optional: Adjust tooltip behavior if it overflows */
+.noUi-tooltip {
+  transition: left 0.1s ease, bottom 0.1s ease;
 }
 

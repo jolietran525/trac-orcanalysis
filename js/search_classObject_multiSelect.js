@@ -20,7 +20,7 @@ class FormHandler {
     this.searchBar.addEventListener('focus', () => this.showDropdown());
     this.searchBar.addEventListener('input', () => this.handleSearchInput());
     this.dropdown.addEventListener('click', (e) => this.handleItemSelect(e)); // Add click event listener for dropdown items
-    this.dropdown.addEventListener('dragstart', (e) => e.preventDefault()); // Prevent default drag behavior
+    
   }
 
   // Show the dropdown when the input field is focused or typing
@@ -183,15 +183,11 @@ class FormHandler {
       return fromMatch && toMatch;
     });
   
+    updateSliderRange();
     displayStopsOnMap(filteredData); // Update the map
   }
   
 }
-
-// Declare variable to store the active FormHandler instance
-let activeFormHandler = null;
-// Global variable to store selected routes
-let selectedRoutes = { from: new Set(), to: new Set() };
 
 // Attach click event listeners to initialize or switch FormHandler dynamically
 document.getElementById('from_searchbar').addEventListener('click', () => {
