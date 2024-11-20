@@ -6,17 +6,25 @@ function updateSliderRange() {
   passengerCounts = d3.rollup(
     filteredData,
     v => d3.sum(v, d => +d.passenger_count),
+    d => d.to_gtfs_agency_id,
     d => d.stop_code
   );
 
-  // Calculate min and max passenger counts
-  minPassengerCount = d3.min(
-    Array.from(passengerCounts.values()) // Extract the values from the Map
-  );
-  maxPassengerCount = d3.max(
-    Array.from(passengerCounts.values()) // Extract the values from the Map
-  );
+  // // Calculate min and max passenger counts
+  // minPassengerCount = d3.min(
+  //   Array.from(passengerCounts.values()) // Extract the values from the Map
+  // );
+  // maxPassengerCount = d3.max(
+  //   Array.from(passengerCounts.values()) // Extract the values from the Map
+  // );
 
+  // Extract the summed values from the nested Map
+  const summedValues = Array.from(passengerCounts.values()).flatMap(d => Array.from(d.values()));
+
+  // Calculate min and max passenger counts
+  minPassengerCount = d3.min(summedValues);
+  maxPassengerCount = d3.max(summedValues);
+  
   passengerCountSlider.noUiSlider.updateOptions({
     start: [minPassengerCount, maxPassengerCount],
     range: {

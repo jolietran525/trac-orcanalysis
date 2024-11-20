@@ -48,17 +48,25 @@ d3.csv("./data/20241008_orca_xfer_stop_summary_with_coords.csv").then(data => {
   passengerCounts = d3.rollup(
     filteredData,
     v => d3.sum(v, d => +d.passenger_count),
+    d => d.to_gtfs_agency_id,
     d => d.stop_code
   );
 
-  // Calculate min and max passenger counts
-  minPassengerCount = d3.min(
-    Array.from(passengerCounts.values()) // Extract the values from the Map
-  );
-  maxPassengerCount = d3.max(
-    Array.from(passengerCounts.values()) // Extract the values from the Map
-  );
+  // // Calculate min and max passenger counts
+  // minPassengerCount = d3.min(
+  //   Array.from(passengerCounts.values()) // Extract the values from the Map
+  // );
+  // maxPassengerCount = d3.max(
+  //   Array.from(passengerCounts.values()) // Extract the values from the Map
+  // );
     
+  // Extract the summed values from the nested Map
+  const summedValues = Array.from(passengerCounts.values()).flatMap(d => Array.from(d.values()));
+
+  // Calculate min and max passenger counts
+  minPassengerCount = d3.min(summedValues);
+  maxPassengerCount = d3.max(summedValues);
+
   noUiSlider.create(passengerCountSlider, {
     start: [minPassengerCount, maxPassengerCount],
     connect: true,
@@ -106,7 +114,7 @@ function displayStopsOnMap(data) {
   const stopsGeoJson = {
     type: "FeatureCollection",
     features: data.filter(d => {
-      const key = `${d.stop_code}_${d.stop_lng}_${d.stop_lat}`;
+      const key = `${d.to_gtfs_agency_id}_${d.stop_code}_${d.stop_lng}_${d.stop_lat}`;
       if (!uniqueStops.has(key)) {
         uniqueStops.add(key);
         return true;
@@ -115,6 +123,7 @@ function displayStopsOnMap(data) {
     }).map(d => ({
       type: "Feature",
       properties: { 
+        to_gtfs_agency_id: d.to_gtfs_agency_id,
         stop_code: d.stop_code
       },
       geometry: { type: "Point", coordinates: [+d.stop_lng, +d.stop_lat] }
@@ -132,7 +141,8 @@ function displayStopsOnMap(data) {
         `<strong>${key}:</strong> ${feature.properties[key]}`).join("<br>")
       );
     //   layer.on("click", () => createTreemapForStop(feature.properties.stop_code));
-      layer.on("click", () => createTableForStop(feature.properties.stop_code));
+      layer.on("click", () => 
+        createTableForStop(feature.properties.stop_code, feature.properties.to_gtfs_agency_id));
     }
   }).addTo(Lmap.map);
 }
@@ -163,27 +173,52 @@ function updateMapBasedOnFilters() {
   // Step 1: Group the filteredData by stop_code and aggregate passenger_count
   const groupedData = d3.rollup(
     filteredData,
-    v => d3.sum(v, d => +d.passenger_count),  // Sum the passenger counts for each stop_code
-    d => d.stop_code                          // Group by stop_code
+    v => d3.sum(v, d => +d.passenger_count),  // Sum the passenger counts for each group
+    d => d.to_gtfs_agency_id,                 // Group by to_gtfs_agency_id first
+    d => d.stop_code                          // Then group by stop_code
   );
-
+  
   // Step 2: Filter the grouped data based on the passenger count range
   const passengerCountMin = passengerSlider.passengerCountMin !== null ? passengerSlider.passengerCountMin : -Infinity;
   const passengerCountMax = passengerSlider.passengerCountMax !== null ? passengerSlider.passengerCountMax : Infinity;
 
-  const filteredGroupedData = Array.from(groupedData).filter(([stopCode, totalPassengerCount]) => {
-    return totalPassengerCount >= passengerCountMin && totalPassengerCount <= passengerCountMax;
-  });
+  // const filteredGroupedData = Array.from(groupedData).filter(([stopCode, to_gtfs_agency_id, totalPassengerCount]) => {
+  //   return totalPassengerCount >= passengerCountMin && totalPassengerCount <= passengerCountMax;
+  // });
 
-  // Step 3: Get the stop_codes that pass the passenger count filter
-  const validStopCodes = new Set(filteredGroupedData.map(([stopCode]) => stopCode));
+  const filteredGroupedData = Array.from(groupedData).flatMap(([to_gtfs_agency_id, stopMap]) => 
+    Array.from(stopMap).filter(([stopCode, totalPassengerCount]) => 
+      totalPassengerCount >= passengerCountMin && totalPassengerCount <= passengerCountMax
+    ).map(([stopCode, totalPassengerCount]) => ({
+      to_gtfs_agency_id,
+      stopCode,
+      totalPassengerCount
+    }))
+  );
+  
+
+  // Step 3: Get the stop_codes that pass the passenger count filter  
+  const validStopCodes = new Set(filteredGroupedData.map(({ to_gtfs_agency_id, stopCode }) => ({
+    to_gtfs_agency_id,
+    stopCode
+  })));
 
   // Step 4: Filter the original filteredData based on the valid stop_codes and selected routes
-  filteredData = filteredData.filter(d => {
-    // Only keep data whose stop_code is in the validStopCodes set
-    const stopCodeMatch = validStopCodes.has(d.stop_code);
+  // filteredData = filteredData.filter(d => {
+  //   // Only keep data whose stop_code and to_gtfs_agency_id are in the validStopCodes set
+  //   return Array.from(validStopCodes).some(validStop => 
+  //     validStop.stopCode === d.stop_code && validStop.to_gtfs_agency_id === d.to_gtfs_agency_id
+  //   );
+  // });
 
-    return stopCodeMatch;
+  // Convert validStopCodes to a Set of strings for quick lookup
+  const validStopCodesSet = new Set(
+    Array.from(validStopCodes).map(({ stopCode, to_gtfs_agency_id }) => `${stopCode}-${to_gtfs_agency_id}`)
+  );
+
+  filteredData = filteredData.filter(d => {
+    // Only keep data whose stop_code and to_gtfs_agency_id are in the validStopCodes set
+    return validStopCodesSet.has(`${d.stop_code}-${d.to_gtfs_agency_id}`);
   });
 
   // Step 5: Update the map with the final filtered data

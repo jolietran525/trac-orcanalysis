@@ -1,8 +1,10 @@
 let filteredStop;
   
-function createTableForStop(stopCode) {
+function createTableForStop(stopCode, agnecyID) {
     // Filter the CSV data based on stop_code
-    const filteredStop = filteredData.filter(d => d.stop_code === stopCode);
+    const filteredStop = filteredData.filter(d => 
+        d.stop_code === stopCode &&
+        d.to_gtfs_agency_id === agnecyID );
   
     // Group by `from_route` and `from_agency`, and sum `passenger_count`
     const groupedFromData = d3.rollup(
