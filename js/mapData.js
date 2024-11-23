@@ -58,6 +58,51 @@ d3.csv("./data/trac_agencies.csv").then(data => {
 });
 
 
+// /**
+//  * Display the filtered stops on the map as GeoJSON layer
+//  * @param {Array} data - Array of filtered stop data to display on the map.
+//  */
+// function displayStopsOnMap(data) {
+//   if (stopLayer) Lmap.map.removeLayer(stopLayer);
+//   const uniqueStops = new Set();
+  
+//   const stopsGeoJson = {
+//     type: "FeatureCollection",
+//     features: data.filter(d => {
+//       const key = `${d.to_gtfs_agency_id}_${d.stop_code}_${d.stop_lng}_${d.stop_lat}`;
+//       if (!uniqueStops.has(key)) {
+//         uniqueStops.add(key);
+//         return true;
+//       }
+//       return false;
+//     }).map(d => ({
+//       type: "Feature",
+//       properties: { 
+//         to_gtfs_agency_id: d.to_gtfs_agency_id,
+//         stop_code: d.stop_code
+//       },
+//       geometry: { type: "Point", coordinates: [+d.stop_lng, +d.stop_lat] }
+//     }))
+//   };
+
+//   const markerOptions = {
+//     radius: 3.5, fillColor: "#ffffff", color: "#000000", weight: 2, opacity: 1, fillOpacity: 1
+//   };
+
+//   stopLayer = L.geoJSON(stopsGeoJson, {
+//     pointToLayer: (feature, latlng) => L.circleMarker(latlng, markerOptions),
+//     onEachFeature: (feature, layer) => {
+//       layer.bindTooltip(Object.keys(feature.properties).map(key => 
+//         `<strong>${key}:</strong> ${feature.properties[key]}`).join("<br>")
+//       );
+//     //   layer.on("click", () => createTreemapForStop(feature.properties.stop_code));
+//       layer.on("click", () => 
+//         createTableForStop(feature.properties.stop_code, feature.properties.to_gtfs_agency_id));
+//     }
+//   }).addTo(Lmap.map);
+// }
+
+
 /**
  * Display the filtered stops on the map as GeoJSON layer
  * @param {Array} data - Array of filtered stop data to display on the map.
@@ -66,6 +111,26 @@ function displayStopsOnMap(data) {
   if (stopLayer) Lmap.map.removeLayer(stopLayer);
   const uniqueStops = new Set();
   
+  // Calculate the sum of passenger_count for each stop_code using d3.rollup
+  const passengerCounts = d3.rollup(
+    data,
+    v => d3.sum(v, d => +d.passenger_count),
+    d => d.to_gtfs_agency_id,
+    d => d.stop_code
+  );
+
+  // Flatten the passengerCounts map for easier access
+  const flattenedPassengerCounts = Array.from(passengerCounts, ([agencyId, stops]) => 
+    Array.from(stops, ([stopCode, count]) => ({
+      key: `${agencyId}_${stopCode}`,
+      count
+    }))
+  ).flat();
+
+  // Create a color scale using D3
+  const colorScale = d3.scaleSequential(d3.interpolateWarm)
+    .domain(d3.extent(flattenedPassengerCounts, d => d.count));
+
   const stopsGeoJson = {
     type: "FeatureCollection",
     features: data.filter(d => {
@@ -79,23 +144,27 @@ function displayStopsOnMap(data) {
       type: "Feature",
       properties: { 
         to_gtfs_agency_id: d.to_gtfs_agency_id,
-        stop_code: d.stop_code
+        stop_code: d.stop_code,
+        passenger_count: passengerCounts.get(d.to_gtfs_agency_id).get(d.stop_code)
       },
       geometry: { type: "Point", coordinates: [+d.stop_lng, +d.stop_lat] }
     }))
   };
 
-  const markerOptions = {
-    radius: 3.5, fillColor: "#ffffff", color: "#000000", weight: 2, opacity: 1, fillOpacity: 1
-  };
-
   stopLayer = L.geoJSON(stopsGeoJson, {
-    pointToLayer: (feature, latlng) => L.circleMarker(latlng, markerOptions),
+    pointToLayer: (feature, latlng) => {
+      const color = colorScale(feature.properties.passenger_count);
+      const markerOptions = {
+        radius: 7
+        , fillColor: color, fillOpacity: 0.5
+        , color: "#000000", weight: 1, opacity: 0.7
+      };
+      return L.circleMarker(latlng, markerOptions);
+    },
     onEachFeature: (feature, layer) => {
       layer.bindTooltip(Object.keys(feature.properties).map(key => 
         `<strong>${key}:</strong> ${feature.properties[key]}`).join("<br>")
       );
-    //   layer.on("click", () => createTreemapForStop(feature.properties.stop_code));
       layer.on("click", () => 
         createTableForStop(feature.properties.stop_code, feature.properties.to_gtfs_agency_id));
     }
