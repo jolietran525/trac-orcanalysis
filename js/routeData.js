@@ -200,7 +200,7 @@ function bringShapetoFront(shape_id) {
       }  
     }
   });
-  routeStopLayer.bringToFront();
+  stopLayer.bringToFront();
 }
 
 /**
@@ -221,7 +221,7 @@ function resetClick(route_id) {
     }
   });
 
-  // routeStopLayer.clearLayers();
+  // stopLayer.clearLayers();
   currentHighlightedRouteId = null;
 
   // Clear the legend display

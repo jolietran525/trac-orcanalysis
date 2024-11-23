@@ -51,8 +51,8 @@ function createTableForStop(stopCode, agnecyID) {
                 <table id="from-table">
                     <thead>
                         <tr>
-                            <th onclick="sortTable('from-table', 0)">From Agency</th>
-                            <th onclick="sortTable('from-table', 1)">From Route</th>
+                            <th onclick="sortTable('from-table', 0)">Agency</th>
+                            <th onclick="sortTable('from-table', 1)">Route</th>
                             <th onclick="sortTable('from-table', 2)">Passenger Count</th>
                         </tr>
                     </thead>
@@ -63,9 +63,9 @@ function createTableForStop(stopCode, agnecyID) {
     fromTableData.forEach(row => {
         tableHtml += `
         <tr>
-            <td>${agencyLookup[row.agency]}</td>
-            <td>${row.route}</td>
-            <td>${row.passengerCount}</td>
+            <td data-value="${agencyLookup[row.agency]}">${agencyLookup[row.agency]}</td>
+            <td data-value="${row.route}">${row.route}</td>
+            <td data-value="${row.passengerCount}">${formatter.to(row.passengerCount)}</td>
         </tr>
         `;
     });
@@ -78,8 +78,8 @@ function createTableForStop(stopCode, agnecyID) {
                 <table id="to-table">
                     <thead>
                         <tr>
-                            <th onclick="sortTable('to-table', 0)">To Agency</th>
-                            <th onclick="sortTable('to-table', 1)">To Route</th>
+                            <th onclick="sortTable('to-table', 0)">Agency</th>
+                            <th onclick="sortTable('to-table', 1)">Route</th>
                             <th onclick="sortTable('to-table', 2)">Passenger Count</th>
                         </tr>
                     </thead>
@@ -90,9 +90,9 @@ function createTableForStop(stopCode, agnecyID) {
     toTableData.forEach(row => {
         tableHtml += `
         <tr>
-            <td>${agencyLookup[row.agency]}</td>
-            <td>${row.route}</td>
-            <td>${row.passengerCount}</td>
+            <td data-value="${agencyLookup[row.agency]}">${agencyLookup[row.agency]}</td>
+            <td data-value="${row.route}">${row.route}</td>
+            <td data-value="${row.passengerCount}">${formatter.to(row.passengerCount)}</td>
         </tr>
         `;
     });
@@ -134,10 +134,6 @@ function showTab(tabName) {
 
 function closeTablePopup() {
     document.querySelector('.popup-table').remove();
-    // // Define the container where the table will be stored
-    // const container = document.querySelector('#popup-container');
-    // // Clear any previous content inside the container
-    // container.innerHTML = "";
     adjustLayoutBasedOnPopupContent();
 }
 
@@ -165,8 +161,11 @@ function sortTable(tableId, n) {
 
         /* Check if the two rows should switch place,
         based on the direction, asc or desc: */
-        let xValue = x.innerHTML.toLowerCase();
-        let yValue = y.innerHTML.toLowerCase();
+        // let xValue = x.innerHTML.toLowerCase();
+        // let yValue = y.innerHTML.toLowerCase();
+
+        let xValue = x.getAttribute('data-value').toLowerCase();
+        let yValue = y.getAttribute('data-value').toLowerCase();
 
         // Check if the values are numbers, and convert if so
         if (!isNaN(xValue) && !isNaN(yValue)) {

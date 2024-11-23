@@ -42,6 +42,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.5.0/nouislider.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.5.0/nouislider.min.js"></script>
     
+    <!-- wNumb - JavaScript Number & Money formatting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/wnumb/1.2.0/wNumb.min.js"></script>
+
     <link rel="stylesheet" href="css/treemap.css" />
   </head>
 
@@ -50,31 +53,6 @@
     <div id="mySidepanel" class="sidepanel">
       <button class="closebtn" onclick="closeNav()">&times;</button>
 
-      <!-- <div class="form">
-        <div class="form-container from" onclick="focusFormContainer('from')">
-          <p>
-            <strong>From Route</strong><br>
-            Filter for a route that riders transfer from.
-          </p>
-          <input class= "searchbar" id="from_searchbar" onkeyup="search_function('from')" placeholder="Search routes..." aria-autocomplete="list" class="input" type="text" autocomplete="off">
-        </div>
-        <div class="dropdown-content" style="padding-bottom: 10px;">
-          <ul class="dropdown-list" id="from_results"></ul>
-        </div>
-      </div>
-      <div class="form">
-        <div class="form-container to" onclick="focusFormContainer('to')">
-          <p>
-            <strong>To Route</strong><br>
-            Filter for a route that riders get on.
-          </p> 
-          <input class= "searchbar" id="to_searchbar" onkeyup="search_function('to')" placeholder="Search routes..." aria-autocomplete="list" class="input" type="text" autocomplete="off">
-        </div>
-        <div class="dropdown-content" style="padding-bottom: 10px;">
-          <ul class="dropdown-list" id="to_results"></ul>
-        </div>
-      </div> -->
-      
       <!-- From Route Form -->
       <div class="form-container from">
         <label for="from_searchbar">
@@ -115,6 +93,7 @@
     </div>
   </main>
   <script src="js/leaflet_map.js"> </script>
+  <script src="js/utilities.js"></script>
   <script src="js/mapData.js"></script>
   <script src="js/routeData.js"></script>
   <!-- <script src="js/treemap.js"></script> -->

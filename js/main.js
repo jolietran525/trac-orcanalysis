@@ -56,9 +56,9 @@ let stops_checkbox;
 let routes;
 
 // Global variable that stores the layer of stops along each route
-let routeStopLayer;
+let stopLayer;
 
-// Global that stores the source data for the routeStopLayer
+// Global that stores the source data for the stopLayer
 let routeStop;
 
 // Global variable that stores the layer of shapes for each route, with the 
@@ -131,7 +131,7 @@ t_routeStop.then(data => {
 
   // Create a GeoJSON layer for route stops, initially set to NULL
   // Stops will be added to the map only when clicking on the route shape layer
-  routeStopLayer  = L.geoJSON(null, {
+  stopLayer  = L.geoJSON(null, {
     pointToLayer: function (feature, geom) {
       // Create a circle marker for each stop using the specified options
       return L.circleMarker(geom, geojsonMarkerOptions);
@@ -243,27 +243,27 @@ function addStopstoClickedLayer() {
       feature.properties.route_id === currentHighlightedRouteId 
   );
 
-  routeStopLayer.clearLayers();
-  routeStopLayer.addData({ type: 'FeatureCollection', features: routeStopFeatures });
+  stopLayer.clearLayers();
+  stopLayer.addData({ type: 'FeatureCollection', features: routeStopFeatures });
 }
 
 // Add an event listener to the stops_checkbox element
 stops_checkbox = document.querySelector('.check');
 stops_checkbox.addEventListener('change', function () {
-  toggleRouteStopLayer(stops_checkbox.checked);
+  togglestopLayer(stops_checkbox.checked);
 });
 
 /** 
  * This function will allow user to show or hide the stops to their preferences
  * when they click on the stop_checkbox option
 */ 
-function toggleRouteStopLayer(showStops) {  
+function togglestopLayer(showStops) {  
   // let showStops = stops_checkbox.checked;
-  // Toggle the visibility of the routeStopLayer
+  // Toggle the visibility of the stopLayer
   if (showStops) {
     addStopstoClickedLayer();
   } else {
-    routeStopLayer.clearLayers();
+    stopLayer.clearLayers();
   }
 }
 
@@ -434,7 +434,7 @@ function bringShapetoFront(shape_id) {
       }  
     }
   });
-  routeStopLayer.bringToFront();
+  stopLayer.bringToFront();
 }
 
 /**
@@ -455,7 +455,7 @@ function resetClick(route_id) {
     }
   });
 
-  routeStopLayer.clearLayers();
+  stopLayer.clearLayers();
   currentHighlightedRouteId = null;
 
   // Clear the legend display
