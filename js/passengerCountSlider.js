@@ -44,6 +44,20 @@ function updateSliderRange() {
     d => d.stop_code
   );
 
+  // Check if passengerCounts is null or empty
+  if (!passengerCounts || passengerCounts.size === 0) {
+    console.log("No passenger data available.");
+    passengerCountSlider.noUiSlider.updateOptions({
+      start: [0, 0],
+      range: {
+        'min': 0,
+        'max': 0
+      }
+    });
+    passengerCountSlider.setAttribute('disabled', true); // Disable the slider
+    return; // Exit the function early
+  }
+
   // Extract the summed values from the nested Map
   const summedValues = Array.from(passengerCounts.values()).flatMap(d => Array.from(d.values()));
 
@@ -58,6 +72,13 @@ function updateSliderRange() {
       'max': maxPassengerCount
     }
   });
+
+  // Disable the slider if min equals max, otherwise enable it
+  if (minPassengerCount === maxPassengerCount) {
+    passengerCountSlider.setAttribute('disabled', true);
+  } else {
+    passengerCountSlider.removeAttribute('disabled');
+  }
 
   // Ensure the slider values are within the new range
   if (passengerSlider.passengerCountMin < minPassengerCount || passengerSlider.passengerCountMin > maxPassengerCount) {
@@ -91,6 +112,20 @@ function updateMapBasedOnFilters() {
 
     return fromMatch && toMatch;
   });
+
+  // Check if filteredData is empty
+  if (filteredData.length === 0) {
+    console.log("No data available for the selected filters.");
+    passengerCountSlider.noUiSlider.updateOptions({
+      start: [0, 0],
+      range: {
+        'min': 0,
+        'max': 0
+      }
+    });
+    displayStopsOnMap([]); // Clear the map or handle as needed
+    return; // Exit the function early
+  }
 
   // Step 1: Group the filteredData by stop_code and aggregate passenger_count
   const groupedData = d3.rollup(
