@@ -459,5 +459,13 @@ td {text-align: right;}
     cursor: pointer;
   }
 
+  .fas {
+    margin-left: 5px;
+    font-size: 14px;
+    transition: color 0.3s ease;
+    color: gray;
+  }
+
+
 /* -------------------------------------------------------------------- */
 

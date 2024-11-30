@@ -1,5 +1,5 @@
 let filteredStop;
-  
+
 function createTableForStop(stopCode, agnecyID) {
     // Filter the CSV data based on stop_code
     const filteredStop = filteredData.filter(d => 
@@ -51,9 +51,11 @@ function createTableForStop(stopCode, agnecyID) {
                 <table id="from-table">
                     <thead>
                         <tr>
-                            <th onclick="sortTable('from-table', 0)">Agency</th>
-                            <th onclick="sortTable('from-table', 1)">Route</th>
-                            <th onclick="sortTable('from-table', 2)">Passenger Count</th>
+
+                            <th onclick="sortTable('from-table', 0, this)">Agency <i class="fas fa-sort"></i></th>
+                            <th onclick="sortTable('from-table', 1, this)">Route <i class="fas fa-sort"></i></th>
+                            <th onclick="sortTable('from-table', 2, this)">Passenger Count <i class="fas fa-sort"></i></th>
+
                         </tr>
                     </thead>
                     <tbody>
@@ -78,9 +80,9 @@ function createTableForStop(stopCode, agnecyID) {
                 <table id="to-table">
                     <thead>
                         <tr>
-                            <th onclick="sortTable('to-table', 0)">Agency</th>
-                            <th onclick="sortTable('to-table', 1)">Route</th>
-                            <th onclick="sortTable('to-table', 2)">Passenger Count</th>
+                            <th onclick="sortTable('to-table', 0, this)">Agency <i class="fas fa-sort"></i></th>
+                            <th onclick="sortTable('to-table', 1, this)">Route <i class="fas fa-sort"></i></th>
+                            <th onclick="sortTable('to-table', 2, this)">Passenger Count <i class="fas fa-sort"></i></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -137,70 +139,78 @@ function closeTablePopup() {
     adjustLayoutBasedOnPopupContent();
 }
 
-function sortTable(tableId, n) {
+function sortTable(tableId, n, header) {
     var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
     table = document.getElementById(tableId);
     switching = true;
-    // Set the sorting direction to ascending:
+
+    // Set the sorting direction to ascending
     dir = "asc";
+
+    // Reset all sort icons in the current table
+    const headers = table.querySelectorAll("th");
+    headers.forEach(th => {
+        const icon = th.querySelector(".fas");
+        if (icon) {
+            icon.className = "fas fa-sort"; // Reset to default
+            icon.style.color = "gray"; // Reset color
+        }
+    });
+
+    // Highlight the current header's icon
+    const sortIcon = header.querySelector(".fas");
+
     /* Make a loop that will continue until
-    no switching has been done: */
+    no switching has been done */
     while (switching) {
-      // Start by saying: no switching is done:
-      switching = false;
-      rows = table.rows;
-      /* Loop through all table rows (except the
-      first, which contains table headers): */
-      for (i = 1; i < (rows.length - 1); i++) {
-        // Start by saying there should be no switching:
-        shouldSwitch = false;
-        /* Get the two elements you want to compare,
-        one from current row and one from the next: */
-        x = rows[i].getElementsByTagName("TD")[n];
-        y = rows[i + 1].getElementsByTagName("TD")[n];
+        switching = false;
+        rows = table.rows;
+        for (i = 1; i < (rows.length - 1); i++) {
+            shouldSwitch = false;
+            x = rows[i].getElementsByTagName("TD")[n];
+            y = rows[i + 1].getElementsByTagName("TD")[n];
 
-        /* Check if the two rows should switch place,
-        based on the direction, asc or desc: */
-        // let xValue = x.innerHTML.toLowerCase();
-        // let yValue = y.innerHTML.toLowerCase();
+            let xValue = x.getAttribute('data-value').toLowerCase();
+            let yValue = y.getAttribute('data-value').toLowerCase();
 
-        let xValue = x.getAttribute('data-value').toLowerCase();
-        let yValue = y.getAttribute('data-value').toLowerCase();
-
-        // Check if the values are numbers, and convert if so
-        if (!isNaN(xValue) && !isNaN(yValue)) {
-            xValue = parseFloat(xValue);
-            yValue = parseFloat(yValue);
-        }
-
-        if (dir == "asc") {
-            if (xValue > yValue) {
-            shouldSwitch = true;
-            break;
+            if (!isNaN(xValue) && !isNaN(yValue)) {
+                xValue = parseFloat(xValue);
+                yValue = parseFloat(yValue);
             }
-        } else if (dir == "desc") {
-            if (xValue < yValue) {
-            shouldSwitch = true;
-            break;
+
+            if (dir == "asc") {
+                if (xValue > yValue) {
+                    shouldSwitch = true;
+                    break;
+                }
+            } else if (dir == "desc") {
+                if (xValue < yValue) {
+                    shouldSwitch = true;
+                    break;
+                }
             }
         }
 
-      }
-      if (shouldSwitch) {
-        /* If a switch has been marked, make the switch
-        and mark that a switch has been done: */
-        rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-        switching = true;
-        // Each time a switch is done, increase this count by 1:
-        switchcount ++;
-      } else {
-        /* If no switching has been done AND the direction is "asc",
-        set the direction to "desc" and run the while loop again. */
-        if (switchcount == 0 && dir == "asc") {
-          dir = "desc";
-          switching = true;
+        if (shouldSwitch) {
+            rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+            switching = true;
+            switchcount++;
+        } else {
+            if (switchcount === 0 && dir === "asc") {
+                dir = "desc";
+                switching = true;
+            }
         }
-      }
     }
-  }
-  
+
+    // Update the icon class based on the sorting direction
+    if (sortIcon) {
+        if (dir === "asc") {
+            sortIcon.className = "fas fa-sort-up"; // Upward arrow
+            sortIcon.style.color = "black"; // Highlight color
+        } else {
+            sortIcon.className = "fas fa-sort-down"; // Downward arrow
+            sortIcon.style.color = "black"; // Highlight color
+        }
+    }
+}
