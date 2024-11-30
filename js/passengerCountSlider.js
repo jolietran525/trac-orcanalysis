@@ -20,6 +20,7 @@ const passengerCountSlider = document.getElementById('passenger_count_slider');
 function initializeSlider() {
   noUiSlider.create(passengerCountSlider, {
     start: [minPassengerCount, maxPassengerCount],
+    behaviour: 'drag',
     connect: true,
     range: {
       'min': minPassengerCount,

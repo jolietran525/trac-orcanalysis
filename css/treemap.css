@@ -280,8 +280,9 @@ td {text-align: right;}
     width: 100%;
     display: block;
     z-index: 62;
-    margin: 10px 20px 75px 20px;
-    padding: auto;
+    margin: 10px 10px 75px 10px;
+    /* padding: auto; */
+    padding: 0 16px;
   }
 
   .noUi-horizontal .noUi-tooltip {
