@@ -233,16 +233,36 @@ function displayStopsOnMap(data) {
 
     div.innerHTML += '<h4>Passenger Count</h4>';
 
-    quantiles.forEach((q, i) => {
-      const color = colors[i];
-      const range = i === 0 ? `≤ ${formatter.to(q)}` : `${formatter.to(quantiles[i - 1])} - ${formatter.to(q)}`;
-      div.innerHTML += `<i class="circle" style="background:${color}"></i> ${range}<br>`;
-    });
+    // quantiles.forEach((q, i) => {
+    //   const color = colors[i];
+    //   const range = i === 0 ? `≤ ${formatter.to(q)}` : `${formatter.to(quantiles[i - 1])} - ${formatter.to(q)}`;
+    //   div.innerHTML += `<i class="circle" style="background:${color}"></i> ${range}<br>`;
+    // });
 
-    // Add the last range
-    const lastRange = `> ${formatter.to(quantiles[quantiles.length - 1])}`;
-    div.innerHTML += `<i class="circle" style="background:${colors[colors.length - 1]}"></i> ${lastRange}<br>`;
+    // // Add the last range
+    // const lastRange = `> ${formatter.to(quantiles[quantiles.length - 1])}`;
+    // div.innerHTML += `<i class="circle" style="background:${colors[colors.length - 1]}"></i> ${lastRange}<br>`;
 
+    if (passengerCountArray.length === 1) {
+      const lastRange = `${formatter.to(quantiles[quantiles.length - 1])}`;
+      div.innerHTML += `<i class="circle" style="background:${colors[colors.length - 1]}"></i> ${lastRange}<br>`;
+    } else if (passengerCountArray.length === 2) {
+      const firstRange = `≤ ${formatter.to(quantiles[0])}`;
+      const lastRange = `> ${formatter.to(quantiles[quantiles.length - 1])}`;
+      div.innerHTML += `<i class="circle" style="background:${colors[0]}"></i> ${firstRange}<br>`;
+      div.innerHTML += `<i class="circle" style="background:${colors[colors.length - 1]}"></i> ${lastRange}<br>`;
+    } else {
+      quantiles.forEach((q, i) => {
+        const color = colors[i];
+        const range = i === 0 ? `≤ ${formatter.to(q)}` : `${formatter.to(quantiles[i - 1])} - ${formatter.to(q)}`;
+        div.innerHTML += `<i class="circle" style="background:${color}"></i> ${range}<br>`;
+      });
+  
+      // Add the last range
+      const lastRange = `> ${formatter.to(quantiles[quantiles.length - 1])}`;
+      div.innerHTML += `<i class="circle" style="background:${colors[colors.length - 1]}"></i> ${lastRange}<br>`;
+    }
+  
     return div;
   };
 
@@ -268,7 +288,7 @@ function displayStopsOnMap(data) {
     return div;
   };
 
-  stopCountLegendControl.addTo(Lmap.map);
-  
+  stopCountLegendControl.addTo(Lmap.map); 
 }
+
 
