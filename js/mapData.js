@@ -14,7 +14,7 @@ const Lmap = new LeafletMap();
 // Store the layer globally for easy reference during updates
 let csvData, filteredData, stopLayer, agencyLookup = {};
 
-let passengerCounts, minPassengerCount, maxPassengerCount;
+let passengerCounts, minPassengerCount, maxPassengerCount, classCounts, quantiles;
 // Declare variable to store the active FormHandler instance
 let activeFormHandler = null;
 
@@ -122,7 +122,7 @@ function displayStopsOnMap(data) {
   const uniqueStops = new Set();
   
   // Calculate the sum of passenger_count for each stop_code using d3.rollup
-  const passengerCounts = d3.rollup(
+  passengerCounts = d3.rollup(
     data,
     v => d3.sum(v, d => +d.passenger_count),
     d => d.to_gtfs_agency_id,
@@ -130,11 +130,47 @@ function displayStopsOnMap(data) {
   );
 
   // Extract passenger counts into an array
-  const passengerCountArray = Array.from(passengerCounts.values()).flatMap(d => Array.from(d.values()));
+  const passengerCountArray = Array.from(passengerCounts.values())
+    .flatMap(d => Array.from(d.values()))
+    .sort(d3.ascending);
+
+  // Function to check for empty classes
+  function hasEmptyClass(numClasses) {
+    const colorScale = d3.scaleQuantile()
+      .domain(passengerCountArray)
+      .range(d3.schemeSpectral[numClasses]);
+
+    quantiles = colorScale.quantiles();
+
+    classCounts = new Array(numClasses).fill(0);
+
+    passengerCountArray.forEach(value => {
+      let assigned = false;
+      for (let i = 0; i < quantiles.length; i++) {
+        if (value <= quantiles[i]) {
+          classCounts[i]++;
+          assigned = true;
+          break;
+        }
+      }
+      if (!assigned) {
+        classCounts[quantiles.length]++;
+      }
+    });
+    
+
+    return classCounts.includes(0);
+  }
+
+  // Determine the number of classes (between 3 and 7)
+  let numClasses = 7;
+  while (numClasses > 3 && hasEmptyClass(numClasses)) {
+    numClasses--;
+  }
 
   const colorScale = d3.scaleQuantile()
-  .domain(passengerCountArray)
-  .range(d3.schemeSpectral[7]); // Using a predefined color scheme with 9 colors
+    .domain(passengerCountArray)
+    .range(d3.schemeSpectral[numClasses]);
 
   const stopsGeoJson = {
     type: "FeatureCollection",
@@ -192,7 +228,7 @@ function displayStopsOnMap(data) {
     }
 
     const div = L.DomUtil.create('div', 'info legend passenger');
-    const quantiles = colorScale.quantiles();
+    quantiles = colorScale.quantiles();
     const colors = colorScale.range();
 
     div.innerHTML += '<h4>Passenger Count</h4>';
@@ -235,3 +271,4 @@ function displayStopsOnMap(data) {
   stopCountLegendControl.addTo(Lmap.map);
   
 }
+

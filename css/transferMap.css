@@ -302,6 +302,14 @@ td {text-align: right;}
     box-sizing: border-box;
   }
 
+  #histogram {
+    position: relative;
+    display: block;
+    border: none;
+    width: 100%;
+    padding-top: 5px;
+  }
+
 /* -------------------------------------------------------------------- *
  * Section: Map Legend------------------------------------------------- *
  * -------------------------------------------------------------------- */
